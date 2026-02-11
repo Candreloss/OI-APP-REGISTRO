@@ -191,6 +191,30 @@ body {
   gap: 1.25rem;
 }
 
+.doc-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.25rem;
+}
+
+/* Ajuste para los campos de documento */
+.input-doc-type {
+  width: 100%;
+  max-width: 180px;
+}
+.input-doc-num {
+  width: 100%;
+  max-width: 220px;
+}
+/* Eliminar estilos de doc-row y doc-col para evitar conflicto visual */
+
+.input-doc-num {
+  width: 180px;
+  min-width: 120px;
+  max-width: 220px;
+}
+
+
 .full-width {
   grid-column: span 2;
 }
