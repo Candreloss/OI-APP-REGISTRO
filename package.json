@@ -20,7 +20,6 @@
   },
   "homepage": "https://github.com/Candreloss/OI-APP-REGISTRO#readme",
   "dependencies": {
-    "body-parser": "^2.2.2",
     "bootstrap": "^5.3.8",
     "ejs": "^4.0.1",
     "express": "^5.2.1",

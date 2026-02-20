@@ -1,11 +1,18 @@
-// Instanciamos el objeto app configurada en server.js
-const app = require('./src/config/server');
+// Archivo: index.js (En la raíz del proyecto)
 
-// Definimos la ruta principal para la pagina
-require('./src/routes/principal')(app);
+// 1. Importamos la app desde su NUEVA ubicación
+const app = require('./src/app'); 
 
+// 2. Importamos las rutas (Usando app.use es más limpio)
+app.use('/', require('./src/routes/principal'));
 
+// 3. Iniciamos el servidor
 const port = app.get('port');
 app.listen(port, () => {
-  console.log(`App listening on port ${port}`);
+    console.log(`
+    ================================================
+    SERVIDOR CORRIENDO EN PUERTO: ${port}
+    Configuración cargada desde: src/app.js
+    ================================================
+    `);
 });

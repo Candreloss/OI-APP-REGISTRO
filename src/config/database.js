@@ -4,6 +4,6 @@ module.exports = () => {
         host: 'localhost',
         user: 'root',
         password: '12345678',
-        database: 'oi_modulo_db'
+        database: 'oi_cap_db_final'
     });
 }

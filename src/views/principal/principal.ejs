@@ -42,7 +42,8 @@
         <div style="width: 100%"></div>
       </nav>
 
-      <main class="main-container">
+      <form action="/registro" method="POST" class="main-container">
+        
         <section class="form-card">
           <div class="form-header">
             <h2>¿Eres participante?</h2>
@@ -51,94 +52,89 @@
             </p>
           </div>
 
-          <form action="/registro" method="post" class="form-grid">
-            <div class="form-group">
-              <label class="label">Tipo de documento</label>
-              <div class="select-wrapper">
-                <select name="tipodoc" class="input input-doc-type" required data-media-type="banani-button">
-                  <option value="" disabled selected>Selecciona</option>
-                  <option value="Pas">Pasaporte</option>
-                  <option value="Ced">Cédula</option>
-                  <option value="Otr">Otros</option>
-                </select>
+          <div class="form-grid">
+            
+            <div class="doc-row">
+              <div class="form-group doc-col">
+                <label class="label">Tipo de documento</label>
+                <div class="select-wrapper">
+                  <select name="tipodoc" class="input input-doc-type" required>
+                    <option value="" disabled selected>Selecciona</option>
+                    <option value="Pas">Pasaporte</option>
+                    <option value="Ced">Cédula</option>
+                    <option value="Otr">Otros</option>
+                  </select>
+                </div>
               </div>
-            </div>
-            <div class="form-group">
-              <label class="label">Documento</label>
-              <input
-                name="doc"
-                type="text"
-                class="input input-doc-num"
-                placeholder="Ej. 1234567890"
-                data-media-type="banani-button"
-              />
+              <div class="form-group doc-col">
+                <label class="label">Documento</label>
+                <input name="doc" type="text" class="input input-doc-num" placeholder="Ej. 12345678" required />
+              </div>
             </div>
 
             <div class="form-group">
               <label class="label">Nombre</label>
-              <input
-                name="nombre"
-                type="text"
-                class="input"
-                placeholder="Tu nombre"
-                data-media-type="banani-button"
-              />
+              <input name="nombre" type="text" class="input" placeholder="Tu nombre" required />
             </div>
 
             <div class="form-group">
               <label class="label">Apellido</label>
-              <input
-                name="apellido"
-                type="text"
-                class="input"
-                placeholder="Tu apellido"
-                data-media-type="banani-button"
-              />
+              <input name="apellido" type="text" class="input" placeholder="Tu apellido" required />
             </div>
 
             <div class="form-group">
               <label class="label">Código de país</label>
-              <input
-                name="codpais"
-                type="text"
-                class="input"
-                placeholder="Ej. +593"
-                maxlength="5"
-                pattern="^\+\d{1,4}$"
-                required
-                data-media-type="banani-button"
-              />
+              <input name="codpais" type="text" class="input" placeholder="Ej. +58" maxlength="5" pattern="^\+\d{1,4}$" required />
             </div>
+          
             <div class="form-group">
               <label class="label">Número de teléfono</label>
-              <input
-                name="telefono"
-                type="tel"
-                class="input"
-                placeholder="Ej. 912345678"
-                minlength="7"
-                maxlength="15"
-                pattern="^\d{7,15}$"
-                required
-                data-media-type="banani-button"
-              />
+              <input name="telefono" type="tel" class="input" placeholder="Ej. 4123456789" minlength="7" maxlength="15" pattern="^\d{7,15}$" required />
             </div>
 
-            <div class="form-group">
+            <div class="form-group full-width">
               <label class="label">Email</label>
-              <input
-                name="email"
-                type="email"
-                class="input"
-                placeholder="ejemplo@correo.com"
-                data-media-type="banani-button"
-              />
+              <input name="email" type="email" class="input" placeholder="ejemplo@correo.com" required />
+            </div>
+
+            <div class="form-group full-width"> 
+              <label class="label">Fecha de Nacimiento</label>
+              <div class="date-row">
+                <div class="date-col year-col">
+                  <input name="año" type="number" class="input" placeholder="Año" min="1900" max="2030" required />
+                  <span class="sub-label">Año</span>
+                </div>
+                <div class="date-col month-col">
+                  <div class="select-wrapper">
+                    <select name="mes" class="input" required style="appearance: none; cursor: pointer">
+                        <option value="" disabled selected>Mes</option>
+                        <option value="01">Ene</option>
+                        <option value="02">Feb</option>
+                        <option value="03">Mar</option>
+                        <option value="04">Abr</option>
+                        <option value="05">May</option>
+                        <option value="06">Jun</option>
+                        <option value="07">Jul</option>
+                        <option value="08">Ago</option>
+                        <option value="09">Sep</option>
+                        <option value="10">Oct</option>
+                        <option value="11">Nov</option>
+                        <option value="12">Dic</option>
+                    </select>
+                  </div>
+                  <span class="sub-label">Mes</span>
+                </div>
+                <div class="date-col day-col">
+                  <input name="dia" type="number" class="input" placeholder="Día" min="1" max="31" required />
+                  <span class="sub-label">Día</span>
+                </div>
+              </div>
             </div>
 
             <div class="form-group">
               <label class="label">País</label>
               <div class="select-wrapper">
-                <select name="pais" class="input" style="appearance: none; cursor: pointer" data-media-type="banani-button">
+                <select name="pais" class="input" style="appearance: none; cursor: pointer" required>
                     <option value="" disabled selected>Selecciona</option>
                     <option value="VE">Venezuela</option>
                     <option value="EC">Ecuador</option>
@@ -152,63 +148,45 @@
 
             <div class="form-group">
               <label class="label">Ciudad</label>
-              <input
-                name="ciudad"
-                type="text"
-                class="input"
-                placeholder="Ciudad de residencia"
-                data-media-type="banani-button"
-              />
+              <input name="ciudad" type="text" class="input" placeholder="Ciudad de residencia" required />
             </div>
 
-            <div class="form-group full-width">
-              <label class="label">Capacitación a escoger</label>
-              <div class="select-wrapper">
-                <select
-                  name="capacitacion"
-                  class="input"
-                  style="appearance: none; cursor: pointer"
-                  data-media-type="banani-button"
-                >
-                  <option value="" disabled="" selected="">
-                    Selecciona una opción
-                  </option>
-                  <option value="1">Desarrollo Web Full Stack</option>
-                  <option value="2">Marketing Digital</option>
-                  <option value="3">Diseño Gráfico</option>
-                  <option value="4">Gestión de Proyectos</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="full-width">
-              <button
-                type="submit"
-                class="btn-primary"
-                data-media-type="banani-button"
-              >
+            <div class="full-width" style="margin-top: 1rem;">
+              <button type="submit" class="btn-primary">
                 Registrarse ahora
               </button>
             </div>
-          </form>
+          </div> </section> <section class="offers-list-section">
+          <h3 class="placeholder-title" style="margin-bottom: 1.5rem; color: var(--brand-blue); font-size: 1.3rem;">
+            Capacitaciones Disponibles
+          </h3>
+          <p class="form-subtitle" style="margin-bottom: 1.5rem;">
+            Selecciona la capacitación en la que deseas inscribirte.
+          </p>
+
+          <div class="offers-grid">
+            <% if (ofertas && ofertas.length > 0) { %>
+                <% ofertas.forEach((oferta) => { %>
+                    <label class="offer-card">
+                        <input type="radio" name="capacitacion" value="<%= oferta.capofcodigo %>" required>
+                        <div class="offer-details">
+                            <span class="offer-title"><%= oferta.capnombre %></span>
+                            <span class="offer-code">Código: <%= oferta.capofcodigo %></span>
+                        </div>
+                    </label>
+                <% }); %>
+            <% } else { %>
+                <div class="placeholder-icon-circle" style="margin: 2rem auto;">
+                    <iconify-icon icon="lucide:frown" style="font-size: 32px; color: var(--muted-foreground)"></iconify-icon>
+                </div>
+                <p class="placeholder-text" style="text-align: center;">
+                  No hay capacitaciones en oferta en este momento.
+                </p>
+            <% } %>
+          </div>
         </section>
 
-        <section class="offers-placeholder">
-          <div class="placeholder-icon-circle">
-            <iconify-icon
-              icon="lucide:layout-template"
-              style="font-size: 32px; color: var(--muted-foreground)"
-            ></iconify-icon>
-          </div>
-          <h3 class="placeholder-title">
-            Ofertas de Capacitación
-          </h3>
-          <p class="placeholder-text">
-            Próximamente mostraremos aquí las capacitaciones disponibles y sus
-            detalles.
-          </p>
-        </section>
-      </main>
+      </form>
     </div>
   </body>
 </html>
