@@ -85,6 +85,13 @@ body {
   justify-self: start;
 }
 
+.top-bar-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  justify-self: end; /* Esto lo empuja a la esquina derecha */
+}
+
 .top-bar-center {
   font-weight: 700;
   font-size: 1.25rem;
