@@ -4,6 +4,8 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Registro Participantes</title>
+
+    <link rel="icon" type="image/png" href="/img/favicon.ico">
     
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -23,20 +25,20 @@
     <div class="export-wrapper">
       
       <nav class="top-bar">
-        <div style="width: 100%"></div>
+        <div class="top-bar-left">
+          <div class="logo-wrapper">
+            <img src="/img/pic01.png" alt="Logo Organización Inteligente" class="nav-logo">
+          </div>
+        </div>
 
-        <div class="top-bar-center">Organización Inteligente</div>
+        <div style="width: 100%"></div>
 
         <div class="top-bar-right">
           <span class="admin-text">¿Eres admin?</span>
-          
           <form action="/login" method="POST" style="margin: 0;">
             <button type="submit" class="btn-secondary" data-media-type="banani-button">
               <div class="icon-container">
-                <iconify-icon
-                  icon="lucide:log-in"
-                  style="font-size: 16px; color: white"
-                ></iconify-icon>
+                <iconify-icon icon="lucide:log-in" style="font-size: 16px; color: white"></iconify-icon>
               </div>
               Login
             </button>

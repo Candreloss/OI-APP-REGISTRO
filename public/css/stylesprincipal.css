@@ -85,6 +85,24 @@ body {
   justify-self: start;
 }
 
+/* El rectángulo azul contenedor */
+.logo-wrapper {
+  background-color: var(--brand-blue); /* Azul OI */
+  padding: 10px 20px; /* Espaciado interno para respirar */
+  border-radius: var(--radius); 
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 5px rgba(69, 90, 159, 0.3); /* Sombra suave azulada */
+}
+
+/* La imagen en sí */
+.nav-logo {
+  height: 40px; /* Ajustar este valor si se ve muy grande o muy pequeño */
+  width: auto;
+  display: block;
+}
+
 .top-bar-right {
   display: flex;
   align-items: center;

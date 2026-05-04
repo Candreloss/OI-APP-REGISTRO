@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title><%= title %></title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link rel="stylesheet" href="/css/adminpanel.css">
+    <style>
+        /* Estilos específicos para la tabla de gestión */
+        .table-container { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; margin: 0 32px 32px 32px;}
+        table { width: 100%; border-collapse: collapse; text-align: left; }
+        th, td { padding: 16px; border-bottom: 1px solid var(--border); font-size: 0.9rem;}
+        th { background: var(--bg-color); color: var(--text-muted); font-weight: 600; text-transform: uppercase; font-size: 0.8rem; letter-spacing: 0.5px;}
+        .badge { padding: 4px 10px; border-radius: 50px; font-size: 0.75rem; font-weight: 600; }
+        .badge.active { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+        .badge.inactive { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        
+        <aside class="sidebar">
+            <div class="sidebar-header"><img src="/img/pic01.png" alt="Logo OI" class="sidebar-logo"></div>
+            <nav class="sidebar-nav">
+                <a href="/panel" class="nav-item"><iconify-icon icon="lucide:layout-dashboard"></iconify-icon> <span>Dashboard</span></a>
+                <a href="/panel/ofertas" class="nav-item active"><iconify-icon icon="lucide:book-open"></iconify-icon> <span>Ofertas de Capacitación</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="/logout" class="nav-item logout-btn"><iconify-icon icon="lucide:log-out"></iconify-icon> <span>Cerrar Sesión</span></a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-header">
+                <div class="header-title"><h1>Gestión de Ofertas</h1></div>
+                <div class="header-user">
+                    <span class="user-name">Hola, <%= admin.username %></span>
+                </div>
+            </header>
+
+            <div style="padding: 32px; display: flex; justify-content: space-between; align-items: center;">
+                <p style="color: var(--text-muted);">Administra el historial completo de las capacitaciones ofertadas.</p>
+                <a href="/panel/nueva-oferta" class="btn-primary-small" style="text-decoration: none;">+ Nueva Oferta</a>
+            </div>
+
+            <div class="table-container">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Capacitación</th>
+                            <th>Fechas</th>
+                            <th>Cupos</th>
+                            <th>Estatus</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% if(ofertas && ofertas.length > 0) { %>
+                            <% ofertas.forEach(oferta => { %>
+                                <tr>
+                                    <td style="font-family: monospace; color: var(--text-muted);">#<%= oferta.capofcodigo %></td>
+                                    <td style="font-weight: 500;"><%= oferta.capnombre %></td>
+                                    <td style="color: var(--text-muted); font-size: 0.85rem;">
+                                        Inicio: <%= new Date(oferta.capoffecha_inicio).toLocaleDateString() %><br>
+                                        Fin: <%= new Date(oferta.capoffecha_fin).toLocaleDateString() %>
+                                    </td>
+                                    <td><%= oferta.capofcupos %></td>
+                                    <td>
+                                        <% if(oferta.capofestatus === 1) { %>
+                                            <span class="badge active">ACTIVA</span>
+                                        <% } else { %>
+                                            <span class="badge inactive">INACTIVA</span>
+                                        <% } %>
+                                    </td>
+                                    <td>
+                                        <a href="/panel/ofertas/editar/<%= oferta.capofcodigo %>" class="btn-icon" style="text-decoration: none; width: 32px; height: 32px; display: inline-flex;" title="Editar">
+                                        <iconify-icon icon="lucide:edit"></iconify-icon>
+                                        </a>
+                                        <a href="/panel/ofertas/toggle/<%= oferta.capofcodigo %>" class="btn-icon <%= oferta.capofestatus === 1 ? 'danger' : '' %>" style="text-decoration: none; width: 32px; height: 32px;" title="<%= oferta.capofestatus === 1 ? 'Desactivar' : 'Activar' %>">
+                                            <iconify-icon icon="<%= oferta.capofestatus === 1 ? 'lucide:power-off' : 'lucide:power' %>"></iconify-icon>
+                                        </a>
+                                    </td>
+                                </tr>
+                            <% }) %>
+                        <% } else { %>
+                            <tr><td colspan="6" style="text-align: center; padding: 2rem;">No hay registros de ofertas.</td></tr>
+                        <% } %>
+                    </tbody>
+                </table>
+            </div>
+        </main>
+    </div>
+</body>
+</html>

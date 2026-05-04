@@ -1,84 +1,134 @@
 <!DOCTYPE html>
 <html lang="es">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Admin Login</title>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/png" href="/img/favicon.ico">
     
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@100;200;300;400;500;600;700;800;900&family=Geist:wght@100;200;300;400;500;600;700;800;900&family=IBM+Plex+Mono:wght@100;200;300;400;500;600;700&family=IBM+Plex+Sans:wght@100;200;300;400;500;600;700&family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Nunito:wght@200;300;400;500;600;700;800;900&family=PT+Serif:wght@400;700&family=Roboto+Slab:wght@100;200;300;400;500;600;700;800;900&family=Roboto:wght@100;300;400;500;700;900&family=Shantell+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
-
-    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fuentes e Iconos -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-    <script src="https://code.iconify.design/iconify-icon/3.0.0/iconify-icon.min.js"></script>
 
-    <link rel="stylesheet" href="/css/stylesadmin.css" />
-  </head>
-  
-  <body>
-    <div class="export-wrapper">
-      <div class="login-container">
-        <div class="brand-title">Aplicación</div>
-
-        <div class="login-card">
-          <div class="card-header">
-            <h1>Acceso Administrativo</h1>
-            <p>Ingresa tus credenciales para continuar</p>
-          </div>
-
-          <form onsubmit="event.preventDefault()">
-            <div class="form-group">
-              <label class="label" for="username">Nombre de usuario</label>
-              <div class="input-wrapper">
-                <input
-                  type="text"
-                  id="username"
-                  class="input"
-                  placeholder="admin@ejemplo.com"
-                  data-media-type="banani-button"
-                  autocomplete="username"
-                />
-              </div>
+    <!-- Nuevo archivo de estilos exclusivo para el panel -->
+    <link rel="stylesheet" href="/css/adminpanel.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        
+        <!-- SIDEBAR (Barra Lateral) -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="/img/pic01.png" alt="Logo OI" class="sidebar-logo">
             </div>
-
-            <div class="form-group">
-              <label class="label" for="password">Contraseña</label>
-              <div class="input-wrapper">
-                <input
-                  type="password"
-                  id="password"
-                  class="input"
-                  placeholder="••••••••"
-                  data-media-type="banani-button"
-                  autocomplete="current-password"
-                />
-              </div>
+            
+            <nav class="sidebar-nav">
+                <!-- Enlaces del menú limpios -->
+                <a href="/panel" class="nav-item active">
+                    <iconify-icon icon="lucide:layout-dashboard"></iconify-icon>
+                    <span>Dashboard</span>
+                </a>
+                <a href="/panel/ofertas" class="nav-item">
+                    <iconify-icon icon="lucide:book-open"></iconify-icon>
+                    <span>Ofertas de Capacitación</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <iconify-icon icon="lucide:users"></iconify-icon>
+                    <span>Participantes y Pagos</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <a href="/logout" class="nav-item logout-btn">
+                    <iconify-icon icon="lucide:log-out"></iconify-icon>
+                    <span>Cerrar Sesión</span>
+                </a>
             </div>
+        </aside>
 
-            <button
-              type="submit"
-              class="btn-primary"
-              data-media-type="banani-button"
-            >
-              <div class="btn-icon-wrapper">
-                <iconify-icon
-                  icon="lucide:lock"
-                  style="font-size: 18px; color: white"
-                ></iconify-icon>
-              </div>
-              Iniciar Sesión
-            </button>
-          </form>
-        </div>
+        <!-- CONTENIDO PRINCIPAL -->
+        <main class="main-content">
+            
+            <header class="top-header">
+                <div class="header-title">
+                    <h1>Resumen General</h1>
+                </div>
+                <div class="header-user">
+                    <iconify-icon icon="lucide:user-circle" class="user-icon"></iconify-icon>
+                    <span class="user-name">Hola, <%= admin.username %></span>
+                </div>
+            </header>
 
-        <a href="/principal" class="back-link" data-media-type="banani-button">
-          ← Volver al registro
-        </a>
-      </div>
+            <!-- 1. TARJETAS DE ESTADÍSTICAS -->
+            <section class="dashboard-cards">
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Ofertas Activas</h3>
+                        <p class="stat-number"><%= stats.totalOfertas %></p>
+                    </div>
+                    <div class="stat-icon" style="background: rgba(69, 90, 159, 0.1); color: var(--brand-blue);">
+                        <iconify-icon icon="lucide:book-open"></iconify-icon>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Inscripciones Pendientes</h3>
+                        <p class="stat-number" style="color: var(--brand-orange);"><%= stats.totalPendientes %></p>
+                    </div>
+                    <div class="stat-icon" style="background: rgba(255, 85, 0, 0.1); color: var(--brand-orange);">
+                        <iconify-icon icon="lucide:clock"></iconify-icon>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-info">
+                        <h3>Pagos Conciliados</h3>
+                        <p class="stat-number" style="color: #10b981;"><%= stats.totalConciliados %></p>
+                    </div>
+                    <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1); color: #10b981;">
+                        <iconify-icon icon="lucide:check-circle"></iconify-icon>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. SECCIÓN: LISTA DE OFERTAS ESTILO PÚBLICO -->
+            <section class="admin-section">
+                <div class="section-header">
+                    <h2>Capacitaciones Disponibles</h2>
+                    <a href="/panel/nueva-oferta" class="btn-primary-small" style="text-decoration: none; display: inline-flex; align-items: center;">
+                        + Nueva Oferta
+                    </a>
+                </div>
+
+                <div class="admin-offers-grid">
+                    <% if (ofertas && ofertas.length > 0) { %>
+                        <% ofertas.forEach((oferta) => { %>
+                            <div class="admin-offer-card">
+                                <div class="offer-details">
+                                    <span class="offer-title"><%= oferta.capnombre %></span>
+                                    <span class="offer-code">Código: <%= oferta.capofcodigo %> | Cupos: <%= oferta.capofcupos %></span>
+                                </div>
+                                <div class="offer-actions">
+                                    <!-- Botón de Editar (Temporalmente inactivo) -->
+                                    <a href="/panel/ofertas/editar/<%= oferta.capofcodigo %>" class="btn-icon" style="text-decoration: none;" title="Editar">
+                                    <iconify-icon icon="lucide:edit"></iconify-icon>
+                                    </a>
+                                    
+                                    <!-- Botón de Desactivar (Corregido: Solo usamos la etiqueta <a> con la clase del botón) -->
+                                    <a href="/panel/ofertas/toggle/<%= oferta.capofcodigo %>" class="btn-icon danger" style="text-decoration: none;" title="Desactivar" onclick="return confirm('¿Seguro que deseas desactivar esta oferta? Ya no será visible para el público.')">
+                                        <iconify-icon icon="lucide:power-off"></iconify-icon>
+                                    </a>
+                                </div>
+                            </div>
+                        <% }); %>
+                    <% } else { %>
+                        <p style="color: var(--text-muted); padding: 1rem;">No hay capacitaciones activas en este momento.</p>
+                    <% } %>
+                </div>
+            </section>
+
+        </main>
     </div>
-  </body>
+</body>
 </html>

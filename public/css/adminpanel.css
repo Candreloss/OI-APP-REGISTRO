@@ -1,0 +1,267 @@
+:root {
+    --brand-orange: #ff5500;
+    --brand-blue: #455a9f;
+    --sidebar-bg: #0b2540; /* Un azul muy oscuro y elegante para el menú */
+    --bg-color: #f1f5f9;
+    --text-main: #0f172a;
+    --text-muted: #64748b;
+    --white: #ffffff;
+    --border: #e2e8f0;
+    --radius: 8px;
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Inter', sans-serif; }
+
+body { background-color: var(--bg-color); color: var(--text-main); }
+
+/* Grid Principal: 250px para el Sidebar, el resto para el contenido */
+.dashboard-container {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    min-height: 100vh;
+}
+
+/* --- SIDEBAR --- */
+.sidebar {
+    background-color: var(--sidebar-bg);
+    color: var(--white);
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-header {
+    padding: 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    display: flex;
+    justify-content: center;
+}
+
+.sidebar-logo {
+    height: 40px;
+    width: auto;
+}
+
+.sidebar-nav {
+    padding: 24px 16px;
+    flex: 1; /* Ocupa el espacio disponible empujando el footer abajo */
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 16px;
+    color: #cbd5e1;
+    text-decoration: none;
+    border-radius: var(--radius);
+    transition: all 0.2s;
+    font-size: 0.95rem;
+    font-weight: 500;
+}
+
+.nav-item iconify-icon { font-size: 20px; }
+
+.nav-item:hover {
+    background-color: rgba(255,255,255,0.05);
+    color: var(--white);
+}
+
+.nav-item.active {
+    background-color: var(--brand-blue);
+    color: var(--white);
+}
+
+.sidebar-footer {
+    padding: 16px;
+    border-top: 1px solid rgba(255,255,255,0.1);
+}
+
+.logout-btn { color: #f87171; }
+.logout-btn:hover { background-color: rgba(239, 68, 68, 0.1); color: #ef4444; }
+
+/* --- CONTENIDO PRINCIPAL --- */
+.main-content {
+    display: flex;
+    flex-direction: column;
+}
+
+/* Cabecera */
+.top-header {
+    height: 70px;
+    background-color: var(--white);
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 32px;
+}
+
+.header-title h1 { font-size: 1.25rem; font-weight: 600; }
+
+.header-user {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.user-icon { font-size: 24px; color: var(--brand-blue); }
+
+/* Tarjetas de Estadísticas */
+.dashboard-cards {
+    padding: 32px;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 24px;
+}
+
+.stat-card {
+    background: var(--white);
+    padding: 24px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+.stat-info h3 {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 8px;
+}
+
+.stat-number {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--text-main);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+}
+
+/* --- NUEVA SECCIÓN DE OFERTAS (Adaptada de la vista pública) --- */
+.admin-section {
+    padding: 0 32px 32px 32px; /* Espaciado lateral e inferior */
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.section-header h2 {
+    font-size: 1.2rem;
+    color: var(--brand-blue);
+    font-weight: 600;
+}
+
+.btn-primary-small {
+    background-color: var(--brand-orange);
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: var(--radius);
+    font-weight: 600;
+    font-size: 0.85rem;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn-primary-small:hover {
+    opacity: 0.9;
+}
+
+.admin-offers-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    background: var(--white);
+    padding: 1.5rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+
+/* La Tarjeta de Oferta Administrativa */
+.admin-offer-card {
+    display: flex;
+    justify-content: space-between; /* Texto a la izq, botones a la der */
+    align-items: center;
+    padding: 1.25rem;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    background-color: var(--bg-color); /* Un gris muy suave */
+    transition: all 0.2s ease-in-out;
+}
+
+.admin-offer-card:hover {
+    border-color: rgba(69, 90, 159, 0.3);
+    background-color: var(--white);
+}
+
+.offer-details {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.offer-title {
+    font-weight: 600;
+    color: var(--text-main);
+    font-size: 1.05rem;
+}
+
+.offer-code {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    font-family: monospace;
+}
+
+/* Botones de acción dentro de la tarjeta */
+.offer-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius);
+    border: 1px solid var(--border);
+    background: var(--white);
+    color: var(--text-muted);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-size: 18px;
+    transition: all 0.2s;
+}
+
+.btn-icon:hover {
+    border-color: var(--brand-blue);
+    color: var(--brand-blue);
+}
+
+.btn-icon.danger:hover {
+    border-color: #ef4444;
+    color: #ef4444;
+    background-color: rgba(239, 68, 68, 0.1);
+}
