@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Servidor: 127.0.0.1
--- Tiempo de generación: 09-02-2026 a las 17:53:52
+-- Tiempo de generación: 27-02-2026 a las 20:24:40
 -- Versión del servidor: 8.0.41
 -- Versión de PHP: 8.0.30
 
@@ -34,6 +34,29 @@ CREATE TABLE `capacitacion` (
   `capcatcodigo` int NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Volcado de datos para la tabla `capacitacion`
+--
+
+INSERT INTO `capacitacion` (`capcodigo`, `capnombre`, `capmodcodigo`, `capcatcodigo`) VALUES
+(1, 'Gerencia para ingenieros y profesiones afines', 1, 3),
+(2, 'Finanzas empresariales', 2, 3),
+(3, 'PowerBI ', 1, 1),
+(4, 'PowerBI nivel basico-intermedio-avanzado', 1, 1),
+(5, 'Finanzas', 1, 1),
+(6, 'Indicadores de gestion como herramienta estrategica', 2, 1),
+(7, 'Social media con inteligencia artificial', 1, 6),
+(8, 'Analisis de costos para la toma de decisiones gerenciales', 1, 2),
+(9, 'Gerencia de negocios', 2, 3),
+(10, 'Inteligencia artificial para principiantes', 2, 2),
+(11, 'Excel intermedio ', 2, 1),
+(12, 'Redes sociales impulsadas con IA', 1, 8),
+(13, 'Redes sociales impulsadas con inteligencia artificial nivel básico', 2, 4),
+(14, 'Oratoria comunícate con confianza', 2, 2),
+(15, 'Campañas publicitarias impulsadas por IA', 2, 2),
+(16, 'Marketing para gerentes y dueños de negocios impulsado con inteligencia artificial', 2, 4),
+(17, 'Estructura de costos', 2, 2);
+
 -- --------------------------------------------------------
 
 --
@@ -48,6 +71,15 @@ CREATE TABLE `capacitacion_oferta` (
   `capofcupos` int NOT NULL,
   `capofestatus` tinyint NOT NULL DEFAULT '1'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `capacitacion_oferta`
+--
+
+INSERT INTO `capacitacion_oferta` (`capofcodigo`, `capofcapcodigo`, `capoffecha_inicio`, `capoffecha_fin`, `capofcupos`, `capofestatus`) VALUES
+(1, 1, '2026-02-19', '2026-03-19', 15, 1),
+(3, 2, '2026-02-20', '2026-03-19', 20, 1),
+(7, 3, '2026-03-23', '2026-03-23', 10, 1);
 
 -- --------------------------------------------------------
 
@@ -65,9 +97,14 @@ CREATE TABLE `categoria` (
 --
 
 INSERT INTO `categoria` (`catcodigo`, `catnombre`) VALUES
-(1, 'CURSOS'),
-(2, 'TALLERES'),
-(3, 'DIPLOMADOS');
+(1, 'CURSO'),
+(2, 'TALLER'),
+(3, 'DIPLOMADO'),
+(4, 'CURSO TALLER'),
+(5, 'JORNADA'),
+(6, 'PROGRAMA INTENSIVO'),
+(7, 'CAMPAMENTO INTENSIVO'),
+(8, 'CURSO INTENSIVO');
 
 -- --------------------------------------------------------
 
@@ -83,6 +120,20 @@ CREATE TABLE `inscripcion` (
   `ins_comprobante` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL,
   `ins_estado` enum('pendiente','conciliado','rechazado') COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT 'pendiente'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `inscripcion`
+--
+
+INSERT INTO `inscripcion` (`inscodigo`, `ins_perdoc`, `ins_oferta`, `ins_fecha`, `ins_comprobante`, `ins_estado`) VALUES
+(1, '10849147', 1, '2026-02-19 15:51:44', NULL, 'pendiente'),
+(2, '11598676', 1, '2026-02-19 15:54:22', NULL, 'pendiente'),
+(3, '30405396', 1, '2026-02-20 20:50:25', NULL, 'pendiente'),
+(7, '31025923', 1, '2026-02-20 22:59:54', NULL, 'pendiente'),
+(10, '31025923', 3, '2026-02-20 23:00:22', NULL, 'pendiente'),
+(11, 'asdadsa', 3, '2026-02-20 23:13:11', NULL, 'pendiente'),
+(12, '31025997', 1, '2026-02-23 21:30:51', NULL, 'pendiente'),
+(14, '31025998', 1, '2026-02-23 21:42:44', NULL, 'pendiente');
 
 -- --------------------------------------------------------
 
@@ -101,7 +152,8 @@ CREATE TABLE `modalidad` (
 
 INSERT INTO `modalidad` (`modcodigo`, `modnombre`) VALUES
 (1, 'VIRTUAL'),
-(2, 'PRESENCIAL');
+(2, 'PRESENCIAL'),
+(3, 'SEMIPRESENCIAL');
 
 -- --------------------------------------------------------
 
@@ -121,6 +173,19 @@ CREATE TABLE `persona` (
   `perciudad` varchar(50) CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Volcado de datos para la tabla `persona`
+--
+
+INSERT INTO `persona` (`pertipodoc`, `perdoc`, `pernombre`, `perapellido`, `perfechanac`, `pertelefono`, `peremail`, `perpais`, `perciudad`) VALUES
+('Ced', '10849147', 'Lisbeth', 'Mendoza', '1973-03-31', '+58-4165523011', 'lisbethmapa@hotmail.com', 'VE', 'Barquisimeto'),
+('Ced', '11598676', 'Karlobell', 'Paradas', '1973-09-21', '+58-4262759222', 'kparadas@gmail.com', 'VE', 'Barquisimeto'),
+('Ced', '30405396', 'Andrea', 'Paradas', '2004-04-30', '+58-4125536625', 'andrea@gmail.com', 'VE', 'Barquisimeto'),
+('Ced', '31025923', 'Carlos', 'Paradas', '2005-09-03', '+58-4125536625', 'carlosdavidparadasmendoza@gmail.com', 'VE', 'Barquisimeto'),
+('Ced', '31025997', 'Carlos', 'Paradas', '2005-09-03', '+58-4125536625', 'carlosdavidparadasmendoza@gmail.com', 'VE', 'Barquisimeto'),
+('Ced', '31025998', 'Carlos', 'Paradas', '2005-09-03', '+58-4125536625', 'carlosdavidparadasmendoza@gmail.com', 'VE', 'Barquisimeto'),
+('Ced', 'asdadsa', 'Carlos', 'Paradas', '1900-01-01', '+58-4125536625', 'carlosdavidparadasmendoza@gmail.com', 'VE', 'asads');
+
 -- --------------------------------------------------------
 
 --
@@ -134,6 +199,20 @@ CREATE TABLE `persona_capacitacion` (
   `pcap_estatus_acad` enum('cursando','aprobado','reprobado','retirado') COLLATE utf8mb4_unicode_ci DEFAULT 'cursando',
   `pcap_certificado_url` varchar(255) COLLATE utf8mb4_unicode_ci DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Volcado de datos para la tabla `persona_capacitacion`
+--
+
+INSERT INTO `persona_capacitacion` (`pcap_perdoc`, `pcap_oferta`, `pcap_nota_final`, `pcap_estatus_acad`, `pcap_certificado_url`) VALUES
+('10849147', 1, NULL, 'cursando', NULL),
+('11598676', 1, NULL, 'cursando', NULL),
+('30405396', 1, NULL, 'cursando', NULL),
+('31025923', 1, NULL, 'cursando', NULL),
+('31025923', 3, NULL, 'cursando', NULL),
+('31025997', 1, NULL, 'cursando', NULL),
+('31025998', 1, NULL, 'cursando', NULL),
+('asdadsa', 3, NULL, 'cursando', NULL);
 
 --
 -- Índices para tablas volcadas
@@ -196,13 +275,13 @@ ALTER TABLE `persona_capacitacion`
 -- AUTO_INCREMENT de la tabla `capacitacion_oferta`
 --
 ALTER TABLE `capacitacion_oferta`
-  MODIFY `capofcodigo` int NOT NULL AUTO_INCREMENT;
+  MODIFY `capofcodigo` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=8;
 
 --
 -- AUTO_INCREMENT de la tabla `inscripcion`
 --
 ALTER TABLE `inscripcion`
-  MODIFY `inscodigo` int NOT NULL AUTO_INCREMENT;
+  MODIFY `inscodigo` int NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=15;
 
 --
 -- Restricciones para tablas volcadas
@@ -233,7 +312,8 @@ ALTER TABLE `inscripcion`
 --
 ALTER TABLE `persona_capacitacion`
   ADD CONSTRAINT `fk_pcap_oferta` FOREIGN KEY (`pcap_oferta`) REFERENCES `capacitacion_oferta` (`capofcodigo`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `fk_pcap_persona` FOREIGN KEY (`pcap_perdoc`) REFERENCES `persona` (`perdoc`) ON DELETE CASCADE ON UPDATE CASCADE;
+  ADD CONSTRAINT `fk_pcap_persona` FOREIGN KEY (`pcap_perdoc`) REFERENCES `persona` (`perdoc`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `fk_pcap_persona_documento` FOREIGN KEY (`pcap_perdoc`) REFERENCES `persona` (`perdoc`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;

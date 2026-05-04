@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title><%= title %></title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link rel="stylesheet" href="/css/adminpanel.css">
+    <style>
+        .form-container { background: var(--white); padding: 2rem; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); max-width: 600px;}
+        .form-group { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+        .form-label { font-weight: 500; font-size: 0.9rem; color: var(--text-main); }
+        .form-input { height: 40px; padding: 0 1rem; border: 1px solid var(--border); border-radius: var(--radius); outline: none; font-size: 0.9rem; }
+        .form-input:focus { border-color: var(--brand-orange); }
+        .btn-submit { background: var(--brand-blue); color: white; border: none; padding: 12px; border-radius: var(--radius); font-weight: 600; cursor: pointer; transition: 0.2s; width: 100%;}
+        .btn-submit:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        
+        <aside class="sidebar">
+            <div class="sidebar-header"><img src="/img/pic01.png" alt="Logo OI" class="sidebar-logo"></div>
+            <nav class="sidebar-nav">
+                <a href="/panel" class="nav-item"><iconify-icon icon="lucide:layout-dashboard"></iconify-icon> <span>Dashboard</span></a>
+                <a href="/panel/ofertas" class="nav-item active"><iconify-icon icon="lucide:book-open"></iconify-icon> <span>Ofertas de Capacitación</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="/logout" class="nav-item logout-btn"><iconify-icon icon="lucide:log-out"></iconify-icon> <span>Cerrar Sesión</span></a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-header">
+                <div class="header-title">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <a href="/panel/ofertas" style="color: var(--text-muted);"><iconify-icon icon="lucide:arrow-left"></iconify-icon></a>
+                        <h1>Editar Capacitación #<%= oferta.capofcodigo %></h1>
+                    </div>
+                </div>
+                <div class="header-user">
+                    <span class="user-name">Hola, <%= admin.username %></span>
+                </div>
+            </header>
+
+            <section style="padding: 32px;">
+                <div class="form-container">
+                    <form action="/panel/ofertas/editar/<%= oferta.capofcodigo %>" method="POST">
+                        
+                        <div class="form-group">
+                            <label class="form-label">Capacitación Ofertada</label>
+                            <select name="capofcapcodigo" class="form-input" required>
+                                <% capacitacionesBase.forEach(cap => { %>
+                                    <!-- Aquí evaluamos si es la capacitación actual para dejarla seleccionada -->
+                                    <option value="<%= cap.capcodigo %>" <%= oferta.capofcapcodigo === cap.capcodigo ? 'selected' : '' %>>
+                                        <%= cap.capnombre %>
+                                    </option>
+                                <% }) %>
+                            </select>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label">Fecha de Inicio</label>
+                                <!-- Formateamos la fecha a YYYY-MM-DD para que HTML la reconozca -->
+                                <input type="date" name="fecha_inicio" class="form-input" value="<%= oferta.capoffecha_inicio.toISOString().split('T')[0] %>" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Fecha de Fin</label>
+                                <input type="date" name="fecha_fin" class="form-input" value="<%= oferta.capoffecha_fin.toISOString().split('T')[0] %>" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Cantidad de Cupos Disponibles</label>
+                            <input type="number" name="cupos" class="form-input" min="1" max="500" value="<%= oferta.capofcupos %>" required>
+                        </div>
+
+                        <button type="submit" class="btn-submit">Guardar Cambios</button>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>

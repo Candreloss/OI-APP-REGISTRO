@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/png" href="/img/favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <link rel="stylesheet" href="/css/adminpanel.css">
+    
+    <!-- Un pequeño ajuste de estilo específico para este formulario -->
+    <style>
+        .form-container { background: var(--white); padding: 2rem; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); max-width: 600px;}
+        .form-group { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
+        .form-label { font-weight: 500; font-size: 0.9rem; color: var(--text-main); }
+        .form-input { height: 40px; padding: 0 1rem; border: 1px solid var(--border); border-radius: var(--radius); outline: none; font-size: 0.9rem; }
+        .form-input:focus { border-color: var(--brand-orange); }
+        .btn-submit { background: var(--brand-orange); color: white; border: none; padding: 12px; border-radius: var(--radius); font-weight: 600; cursor: pointer; transition: 0.2s; width: 100%;}
+        .btn-submit:hover { opacity: 0.9; }
+    </style>
+</head>
+<body>
+    <div class="dashboard-container">
+        
+        <!-- SIDEBAR (Igual que en el panel principal) -->
+        <aside class="sidebar">
+            <div class="sidebar-header">
+                <img src="/img/pic01.png" alt="Logo OI" class="sidebar-logo">
+            </div>
+            <nav class="sidebar-nav">
+                <a href="/panel" class="nav-item">
+                    <iconify-icon icon="lucide:layout-dashboard"></iconify-icon> <span>Dashboard</span>
+                </a>
+                <a href="/panel/nueva-oferta" class="nav-item active">
+                    <iconify-icon icon="lucide:plus-circle"></iconify-icon> <span>Nueva Oferta</span>
+                </a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="/logout" class="nav-item logout-btn">
+                    <iconify-icon icon="lucide:log-out"></iconify-icon> <span>Cerrar Sesión</span>
+                </a>
+            </div>
+        </aside>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <main class="main-content">
+            <header class="top-header">
+                <div class="header-title">
+                    <div style="display: flex; align-items: center; gap: 10px;">
+                        <a href="/panel" style="color: var(--text-muted);"><iconify-icon icon="lucide:arrow-left"></iconify-icon></a>
+                        <h1>Abrir Nueva Capacitación</h1>
+                    </div>
+                </div>
+                <div class="header-user">
+                    <iconify-icon icon="lucide:user-circle" class="user-icon"></iconify-icon>
+                    <span class="user-name">Hola, <%= admin.username %></span>
+                </div>
+            </header>
+
+            <section style="padding: 32px;">
+                <div class="form-container">
+                    <form action="/panel/nueva-oferta" method="POST">
+                        
+                        <div class="form-group">
+                            <label class="form-label">Capacitación a Ofertar</label>
+                            <select name="capofcapcodigo" class="form-input" required>
+                                <option value="" disabled selected>-- Selecciona un curso del catálogo --</option>
+                                <!-- Ciclo que llena las opciones desde la Base de Datos -->
+                                <% if(capacitacionesBase) { %>
+                                    <% capacitacionesBase.forEach(cap => { %>
+                                        <option value="<%= cap.capcodigo %>"><%= cap.capnombre %></option>
+                                    <% }) %>
+                                <% } %>
+                            </select>
+                        </div>
+
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
+                            <div class="form-group">
+                                <label class="form-label">Fecha de Inicio</label>
+                                <input type="date" name="fecha_inicio" class="form-input" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Fecha de Fin</label>
+                                <input type="date" name="fecha_fin" class="form-input" required>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label class="form-label">Cantidad de Cupos Disponibles</label>
+                            <input type="number" name="cupos" class="form-input" min="1" max="500" placeholder="Ej. 20" required>
+                        </div>
+
+                        <button type="submit" class="btn-submit">Publicar Oferta</button>
+                    </form>
+                </div>
+            </section>
+        </main>
+    </div>
+</body>
+</html>
