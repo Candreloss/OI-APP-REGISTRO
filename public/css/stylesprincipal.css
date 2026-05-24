@@ -53,12 +53,13 @@ body {
 /* Layout Principal */
 .export-wrapper {
   width: 100%;
-  max-width: 1440px; /* Movido desde inline style */
-  min-height: 100vh; /* Cambiado de 812px a 100vh para mejor responsividad */
-  margin: 0 auto;    /* Centrar el contenido si la pantalla es muy grande */
+  max-width: 1440px; 
+  min-height: 100vh; 
+  margin: 0 auto;    
   position: relative;
   font-family: var(--font-family-body);
-  background-color: #f8fafc;
+  /* FONDO ACTUALIZADO: Gradiente moderno */
+  background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
   color: var(--foreground);
   display: flex;
   flex-direction: column;
@@ -87,18 +88,18 @@ body {
 
 /* El rectángulo azul contenedor */
 .logo-wrapper {
-  background-color: var(--brand-blue); /* Azul OI */
-  padding: 10px 20px; /* Espaciado interno para respirar */
+  background-color: var(--brand-blue); 
+  padding: 10px 20px; 
   border-radius: var(--radius); 
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 5px rgba(69, 90, 159, 0.3); /* Sombra suave azulada */
+  box-shadow: 0 2px 5px rgba(69, 90, 159, 0.3); 
 }
 
 /* La imagen en sí */
 .nav-logo {
-  height: 40px; /* Ajustar este valor si se ve muy grande o muy pequeño */
+  height: 40px; 
   width: auto;
   display: block;
 }
@@ -107,7 +108,7 @@ body {
   display: flex;
   align-items: center;
   gap: 1rem;
-  justify-self: end; /* Esto lo empuja a la esquina derecha */
+  justify-self: end; 
 }
 
 .top-bar-center {
@@ -136,7 +137,8 @@ body {
 /* Botones */
 .btn-primary {
   height: 44px;
-  background-color: var(--primary);
+  /* BOTÓN ACTUALIZADO: Gradiente, sombra y animación */
+  background: linear-gradient(135deg, #ff7300 0%, #e64d00 100%);
   color: var(--primary-foreground);
   border: none;
   border-radius: var(--radius);
@@ -147,12 +149,14 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity 0.2s;
+  box-shadow: 0 4px 14px 0 rgba(255, 85, 0, 0.39);
+  transition: all 0.2s ease;
   margin-top: 1rem;
 }
 
 .btn-primary:hover {
-  opacity: 0.9;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 85, 0, 0.4);
 }
 
 .btn-secondary {
@@ -171,25 +175,33 @@ body {
 }
 
 /* Contenedor Principal */
+/* Contenedor Principal */
 .main-container {
   flex: 1;
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
   padding: 3rem 2rem;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 3rem;
-  align-items: start;
+  /* ACTUALIZADO: Cambiamos de grid a flex para centrar perfectamente */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 /* Formulario */
+/* Formulario */
 .form-card {
   background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  padding: 2rem;
+  border: 1px solid rgba(255, 255, 255, 0.5); 
+  border-radius: 16px; 
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08); 
+  padding: 2.5rem 2rem; /* Un poquito más de aire arriba y abajo */
+  transition: transform 0.3s ease;
+  
+  /* NUEVO: Lo limitamos para que se vea como un cajón de login elegante */
+  width: 100%;
+  max-width: 450px; 
 }
 
 .form-header {
@@ -202,6 +214,21 @@ body {
   font-size: 1.5rem;
   font-weight: 600;
   margin: 0;
+  /* DETALLE ACTUALIZADO: Subrayado naranja dinámico */
+  position: relative;
+  display: inline-block;
+  padding-bottom: 8px;
+}
+
+.form-header h2::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  bottom: 0;
+  width: 40px;
+  height: 4px;
+  background-color: var(--brand-orange);
+  border-radius: 2px;
 }
 
 .form-subtitle {
@@ -240,7 +267,6 @@ body {
   min-width: 120px;
   max-width: 248px;
 }
-
 
 .full-width {
   grid-column: span 2;
@@ -336,7 +362,7 @@ body {
 
 .date-row {
   display: flex;
-  gap: 0.75rem; /* Espacio entre las cajitas */
+  gap: 0.75rem; 
   width: 100%;
 }
 
@@ -345,23 +371,10 @@ body {
   flex-direction: column;
 }
 
-/* Control de anchos: */
-/* Año un poco más ancho */
-.year-col {
-  flex: 2; 
-}
+.year-col { flex: 2; }
+.month-col { flex: 3; }
+.day-col { flex: 1.5; }
 
-/* Mes el más ancho para que quepa el texto */
-.month-col {
-  flex: 3;
-}
-
-/* Día el más angosto */
-.day-col {
-  flex: 1.5; 
-}
-
-/* Etiquetas pequeñitas debajo del input (Estilo moderno) */
 .sub-label {
   font-size: 0.7rem;
   color: var(--muted-foreground);
@@ -369,30 +382,32 @@ body {
   margin-left: 2px;
 }
 
-/* Ajuste para que los selects y inputs de fecha se vean iguales */
 .date-row .input {
-  padding: 0 0.5rem; /* Menos padding lateral para que quepa el texto */
-  text-align: center; /* Texto centrado se ve mejor en fechas */
+  padding: 0 0.5rem; 
+  text-align: center; 
 }
 
 .month-col .input {
-  text-align: left; /* El select del mes mejor alineado a la izquierda */
+  text-align: left; 
 }
 
 /* --- ESTILOS PARA LA COLUMNA DE OFERTAS DERECHA --- */
 
 .offers-list-section {
   background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  /* SECCIÓN ACTUALIZADA: Efecto cristal y profundidad */
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
   padding: 2.5rem 2rem;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
-  height: fit-content; /* Para que no se estire más de lo necesario */
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
+  height: fit-content; 
+  transition: transform 0.3s ease;
 }
 
 .offers-grid {
-  display: flex;
-  flex-direction: column;
+  /* ACTUALIZADO: De flex a grid responsivo */
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   gap: 1rem;
 }
 
@@ -401,23 +416,27 @@ body {
   display: flex;
   align-items: center;
   padding: 1.25rem;
-  border: 2px solid var(--border);
-  border-radius: var(--radius);
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
   cursor: pointer;
-  transition: all 0.2s ease-in-out;
+  /* ANIMACIÓN SUPER FLUIDA AL PASAR EL MOUSE */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   background-color: var(--background);
+  position: relative;
+  overflow: hidden;
 }
 
 .offer-card:hover {
-  border-color: rgba(69, 90, 159, 0.5); /* brand-blue transparente */
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border-color: var(--brand-blue);
+  transform: translateY(-5px);
+  box-shadow: 0 12px 20px -8px rgba(30, 58, 138, 0.15);
 }
 
 /* Estado cuando el radio button está seleccionado */
 .offer-card:has(input[type="radio"]:checked) {
   border-color: var(--brand-orange);
-  background-color: rgba(255, 85, 0, 0.05);
+  background-color: rgba(255, 85, 0, 0.03);
+  box-shadow: 0 0 0 1px var(--brand-orange);
 }
 
 /* Estilizar el botoncito circular (Radio) */

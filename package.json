@@ -26,6 +26,7 @@
     "express": "^5.2.1",
     "express-session": "^1.19.0",
     "jspdf": "^4.1.0",
-    "mysql": "^2.18.1"
+    "mysql": "^2.18.1",
+    "nodemailer": "^8.0.8"
   }
 }

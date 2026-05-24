@@ -4,6 +4,7 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Admin Login</title>
+    <link rel="icon" type="image/png" href="/img/favicon.ico">
     
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
@@ -22,7 +23,13 @@
   <body>
     <div class="export-wrapper">
       <div class="login-container">
-        <div class="brand-title">Aplicación</div>
+        <!-- Reemplazamos el texto por el logo de OI -->
+        <div class="brand-title" style="display: flex; justify-content: center;">
+          <!-- Contenedor Azul Corporativo inyectado directamente -->
+          <div style="background-color: var(--brand-blue, #455a9f); padding: 12px 24px; border-radius: 8px; box-shadow: 0 4px 12px rgba(69, 90, 159, 0.25); display: inline-flex; align-items: center; justify-content: center; transition: transform 0.3s ease;" onmouseover="this.style.transform='translateY(-2px)'" onmouseout="this.style.transform='translateY(0)'">
+            <img src="/img/pic01.png" alt="Logo Organización Inteligente" style="height: 45px; width: auto; display: block;">
+          </div>
+        </div>
 
         <div class="login-card">
           <div class="card-header">
