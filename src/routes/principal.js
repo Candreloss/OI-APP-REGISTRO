@@ -5,8 +5,42 @@ const router = express.Router();
 const publicoController = require('../controllers/publicoController');
 const adminController = require('../controllers/adminController');
 
+// --- NUEVAS RUTAS DE IDENTIDAD (OTP) ---
+router.post('/api/solicitar-otp', publicoController.solicitarOTP);
+router.post('/api/validar-otp', publicoController.validarOTP);
+
 // 1. IMPORTAMOS EL GUARDIA DE SEGURIDAD
 const verificarSesion = require('../middlewares/auth');
+
+
+
+// IMPORTAMOS EL MOTOR DE CORREOS
+const transporter = require('../utils/mailer');
+
+// --- RUTA TEMPORAL DE PRUEBA ---
+router.get('/test-correo', async (req, res) => {
+    try {
+        await transporter.sendMail({
+            from: '"Organización Inteligente" <1001.31025923.ucla@gmail.com>', // <-- El correo que envía
+            to: 'carlosdavidparadasmendoza@gmail.com', // <-- Pon TU correo personal para recibir la prueba
+            subject: 'Prueba del Sistema de Correos 🚀',
+            html: `
+                <div style="font-family: Arial, sans-serif; padding: 20px; text-align: center;">
+                    <h2 style="color: #455a9f;">¡Conexión Exitosa!</h2>
+                    <p>Si estás leyendo esto, el Motor de Comunicación de <b>Organización Inteligente</b> funciona a la perfección.</p>
+                    <p style="font-size: 24px; font-weight: bold; color: #ff5500;">000000</p>
+                    <p style="color: #64748b; font-size: 12px;">Esto es una prueba de arquitectura.</p>
+                </div>
+            `
+        });
+        res.send('<h1>¡Magia enviada! Revisa tu bandeja de entrada.</h1>');
+    } catch (error) {
+        console.error('Error enviando correo de prueba:', error);
+        res.status(500).send('Falló el envío del correo. Revisa la terminal de VS Code.');
+    }
+});
+
+
 
 // --- RUTAS PÚBLICAS ---
 router.get('/', publicoController.mostrarPrincipal);

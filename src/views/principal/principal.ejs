@@ -46,197 +46,301 @@
         </div>
       </nav>
 
-      <form action="/registro" method="POST" class="main-container">
+      <div class="main-container" id="app-container">
         
-        <section class="form-card">
+        <section class="form-card" id="step-1-identity">
           <div class="form-header">
-            <h2>¿Eres participante?</h2>
-            <p class="form-subtitle">
-              Completa tus datos para inscribirte en las capacitaciones.
-            </p>
+            <h2>Acceso Participantes</h2>
+            <p class="form-subtitle">Ingresa tu cédula y correo para recibir un código de seguridad.</p>
           </div>
 
-          <div class="form-grid">
-            
-            <div class="doc-row">
-              <div class="form-group doc-col">
-                <label class="label">Tipo de documento</label>
-                <div class="select-wrapper">
-                  <select name="tipodoc" class="input input-doc-type" required>
-                    <option value="" disabled selected>Selecciona</option>
-                    <option value="Pas">Pasaporte</option>
-                    <option value="Ced">Cédula</option>
-                    <option value="Otr">Otros</option>
-                  </select>
-                </div>
-              </div>
-              <div class="form-group doc-col">
-                <label class="label">Documento</label>
-                <input 
-                  name="doc" 
-                  type="text" 
-                  class="input input-doc-num" 
-                  placeholder="Ej. 12345678" 
-                  minlength="6"
-                  maxlength="20"
-                  pattern="^[a-zA-Z0-9]{6,20}$"
-                  title="Ingresa entre 6 y 20 caracteres (letras o números, sin espacios)"
-                  required 
-                />
-              </div>
+          <div class="form-grid" style="display: flex; flex-direction: column; gap: 1.25rem;">
+            <div class="form-group">
+              <label class="label">Número de Documento (Cédula/Pasaporte)</label>
+              <input type="text" id="auth-cedula" class="input" placeholder="Ej. 12345678" required />
             </div>
 
             <div class="form-group">
-              <label class="label">Nombre</label>
-              <input name="nombre" type="text" class="input" placeholder="Tu nombre" required />
+              <label class="label">Correo Electrónico</label>
+              <input type="email" id="auth-email" class="input" placeholder="ejemplo@correo.com" required />
             </div>
 
-            <div class="form-group">
-              <label class="label">Apellido</label>
-              <input name="apellido" type="text" class="input" placeholder="Tu apellido" required />
-            </div>
-
-            <div class="form-group">
-              <label class="label">Código de país</label>
-              <input name="codpais" type="text" class="input" placeholder="Ej. +58" maxlength="5" pattern="^\+\d{1,4}$" required />
-            </div>
-          
-            <div class="form-group">
-                <label class="label">Número de teléfono</label>
-                <input 
-                  name="telefono" 
-                  type="tel" 
-                  class="input" 
-                  placeholder="Ej. 4123456789" 
-                  minlength="7" 
-                  maxlength="15" 
-                  pattern="^\d{7,15}$" 
-                  title="Ingresa entre 7 y 15 números, sin espacios ni guiones"
-                  required 
-                />
-              </div>
-
-            <div class="form-group full-width">
-              <label class="label">Email</label>
-              <input name="email" type="email" class="input" placeholder="ejemplo@correo.com" required />
-            </div>
-
-            <div class="form-group full-width"> 
-              <label class="label">Fecha de Nacimiento</label>
-              <div class="date-row">
-                <div class="date-col year-col">
-                  <input name="año" type="number" class="input" placeholder="Año" min="1900" max="2030" required />
-                  <span class="sub-label">Año</span>
-                </div>
-                <div class="date-col month-col">
-                  <div class="select-wrapper">
-                    <select name="mes" class="input" required style="appearance: none; cursor: pointer">
-                        <option value="" disabled selected>Mes</option>
-                        <option value="01">Ene</option>
-                        <option value="02">Feb</option>
-                        <option value="03">Mar</option>
-                        <option value="04">Abr</option>
-                        <option value="05">May</option>
-                        <option value="06">Jun</option>
-                        <option value="07">Jul</option>
-                        <option value="08">Ago</option>
-                        <option value="09">Sep</option>
-                        <option value="10">Oct</option>
-                        <option value="11">Nov</option>
-                        <option value="12">Dic</option>
-                    </select>
-                  </div>
-                  <span class="sub-label">Mes</span>
-                </div>
-                <div class="date-col day-col">
-                  <input name="dia" type="number" class="input" placeholder="Día" min="1" max="31" required />
-                  <span class="sub-label">Día</span>
-                </div>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="label">País</label>
-              <div class="select-wrapper">
-                <select name="pais" class="input" style="appearance: none; cursor: pointer" required>
-                    <option value="" disabled selected>Selecciona</option>
-                    <option value="VE">Venezuela</option>
-                    <option value="EC">Ecuador</option>
-                    <option value="CO">Colombia</option>
-                    <option value="PE">Perú</option>
-                    <option value="MX">México</option>
-                    <option value="OT">Otro</option>
-                </select>
-              </div>
-            </div>
-
-            <div class="form-group">
-              <label class="label">Ciudad</label>
-              <input name="ciudad" type="text" class="input" placeholder="Ciudad de residencia" required />
-            </div>
-
-            <div class="full-width" style="margin-top: 1rem;">
-              <button type="submit" class="btn-primary">
-                Registrarse ahora
-              </button>
-            </div>
-          </div> </section> <section class="offers-list-section">
-          <h3 class="placeholder-title" style="margin-bottom: 1.5rem; color: var(--brand-blue); font-size: 1.3rem;">
-            Capacitaciones Disponibles
-          </h3>
-          <p class="form-subtitle" style="margin-bottom: 1.5rem;">
-            Selecciona la capacitación en la que deseas inscribirte.
-          </p>
-
-          <div class="offers-grid">
-            <% if (ofertas && ofertas.length > 0) { %>
-                <% ofertas.forEach((oferta) => { %>
-                    <label class="offer-card">
-                        <input type="radio" name="capacitacion" value="<%= oferta.capofcodigo %>" required>
-                        <div class="offer-details">
-                            <span class="offer-title"><%= oferta.capnombre %></span>
-                            <span class="offer-code">Código: <%= oferta.capofcodigo %></span>
-                        </div>
-                    </label>
-                <% }); %>
-            <% } else { %>
-                <div class="placeholder-icon-circle" style="margin: 2rem auto;">
-                    <iconify-icon icon="lucide:frown" style="font-size: 32px; color: var(--muted-foreground)"></iconify-icon>
-                </div>
-                <p class="placeholder-text" style="text-align: center;">
-                  No hay capacitaciones en oferta en este momento.
-                </p>
-            <% } %>
+            <button type="button" class="btn-primary" id="btn-solicitar" onclick="solicitarOTP()">
+              Enviar Código de Acceso
+            </button>
           </div>
         </section>
 
-      </form>
+        <section class="form-card" id="step-2-otp" style="display: none;">
+          <div class="form-header">
+            <h2>Verifica tu Identidad</h2>
+            <p class="form-subtitle" id="otp-subtitle">Hemos enviado un código a tu correo.</p>
+          </div>
+
+          <div class="form-grid" style="display: flex; flex-direction: column; gap: 1.25rem; align-items: center;">
+            <div class="form-group" style="width: 100%; text-align: center;">
+              <label class="label">Ingresa el código de 6 dígitos</label>
+              <input type="text" id="auth-codigo" class="input" placeholder="000000" maxlength="6" style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem; font-weight: bold; height: 60px;" required />
+            </div>
+
+            <button type="button" class="btn-primary" id="btn-validar" onclick="validarOTP()">
+              Verificar y Continuar
+            </button>
+            
+            <a href="#" onclick="volverPaso1()" style="font-size: 0.85rem; color: var(--brand-blue); text-decoration: none; margin-top: 10px;">← Usar otro correo</a>
+          </div>
+        </section>
+
+        <section class="form-card" id="step-3-existente" style="display: none; width: 100%; max-width: 450px;">
+          <div class="form-header">
+            <h2 id="welcome-user-name" style="color: var(--brand-blue); font-size: 1.5rem; font-weight: 600;">¡Bienvenido!</h2>
+            <p class="form-subtitle">¿Qué trámite deseas realizar hoy?</p>
+          </div>
+
+          <div style="display: flex; flex-direction: column; gap: 1rem; margin-top: 2rem;">
+            <button type="button" class="btn-primary" onclick="abrirNuevaInscripcion()">
+              Inscribirme en una Capacitación Extra
+            </button>
+            <button type="button" class="btn-secondary" onclick="abrirReportePago()" style="justify-content: center; height: 44px; border: 1px solid var(--brand-blue); background: transparent; color: var(--brand-blue);">
+              Reportar un Pago Pendiente
+            </button>
+          </div>
+        </section>
+
+        <section class="form-card" id="step-3-nuevo" style="display: none; width: 100%; max-width: 800px;">
+          <div class="form-header">
+            <h2>Completa tu Perfil</h2>
+            <p class="form-subtitle">Como es tu primera vez, necesitamos tus datos básicos para emitir tus certificados.</p>
+          </div>
+          
+          <form action="/registro" method="POST" style="margin-top: 1.5rem;">
+            
+            <input type="hidden" name="doc" id="hidden-doc" />
+            <input type="hidden" name="email" id="hidden-email" />
+
+            <div class="form-grid">
+              
+              <div class="form-group full-width">
+                <label class="label">¿Qué tipo de documento ingresaste al inicio?</label>
+                <div class="select-wrapper">
+                  <select name="tipodoc" class="input" required>
+                    <option value="" disabled selected>Selecciona una opción</option>
+                    <option value="Ced">Cédula de Identidad</option>
+                    <option value="Pas">Pasaporte</option>
+                    <option value="Otr">Otro Documento</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="label">Nombre</label>
+                <input name="nombre" type="text" class="input" placeholder="Tu nombre" required />
+              </div>
+
+              <div class="form-group">
+                <label class="label">Apellido</label>
+                <input name="apellido" type="text" class="input" placeholder="Tu apellido" required />
+              </div>
+
+              <div class="form-group">
+                <label class="label">Código de país</label>
+                <input name="codpais" type="text" class="input" placeholder="Ej. +58" maxlength="5" pattern="^\+\d{1,4}$" required />
+              </div>
+            
+              <div class="form-group">
+                  <label class="label">Número de teléfono</label>
+                  <input name="telefono" type="tel" class="input" placeholder="Ej. 4123456789" minlength="7" maxlength="15" pattern="^\d{7,15}$" required />
+              </div>
+
+              <div class="form-group full-width"> 
+                <label class="label">Fecha de Nacimiento</label>
+                <div class="date-row">
+                  <div class="date-col year-col">
+                    <input name="año" type="number" class="input" placeholder="Año" min="1900" max="2030" required />
+                    <span class="sub-label">Año</span>
+                  </div>
+                  <div class="date-col month-col">
+                    <div class="select-wrapper">
+                      <select name="mes" class="input" required style="appearance: none; cursor: pointer">
+                          <option value="" disabled selected>Mes</option>
+                          <option value="01">Ene</option><option value="02">Feb</option><option value="03">Mar</option>
+                          <option value="04">Abr</option><option value="05">May</option><option value="06">Jun</option>
+                          <option value="07">Jul</option><option value="08">Ago</option><option value="09">Sep</option>
+                          <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dic</option>
+                      </select>
+                    </div>
+                    <span class="sub-label">Mes</span>
+                  </div>
+                  <div class="date-col day-col">
+                    <input name="dia" type="number" class="input" placeholder="Día" min="1" max="31" required />
+                    <span class="sub-label">Día</span>
+                  </div>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="label">País de Residencia</label>
+                <div class="select-wrapper">
+                  <select name="pais" class="input" style="appearance: none; cursor: pointer" required>
+                      <option value="" disabled selected>Selecciona tu país</option>
+                      <option value="VE">Venezuela</option>
+                      <optgroup label="Latinoamérica">
+                        <option value="AR">Argentina</option><option value="CO">Colombia</option><option value="CL">Chile</option>
+                        <option value="MX">México</option><option value="PE">Perú</option><option value="EC">Ecuador</option>
+                      </optgroup>
+                      <option value="OT">Otro</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-group">
+                <label class="label">Ciudad</label>
+                <input name="ciudad" type="text" class="input" placeholder="Ciudad actual" required />
+              </div>
+            </div>
+
+            <div style="margin-top: 2.5rem; padding-top: 2rem; border-top: 1px solid var(--border);">
+              <h3 style="color: var(--brand-blue); font-size: 1.2rem; font-weight: 600; margin-bottom: 1rem;">
+                ¿En qué capacitación deseas inscribirte hoy?
+              </h3>
+              
+              <div class="offers-grid">
+                <% if (ofertas && ofertas.length > 0) { %>
+                    <% ofertas.forEach((oferta) => { %>
+                        <label class="offer-card">
+                            <input type="radio" name="capacitacion" value="<%= oferta.capofcodigo %>" required>
+                            <div class="offer-details">
+                                <span class="offer-title"><%= oferta.capnombre %></span>
+                                <span class="offer-code">Código: <%= oferta.capofcodigo %></span>
+                            </div>
+                        </label>
+                    <% }); %>
+                <% } else { %>
+                    <p class="placeholder-text" style="color: var(--text-muted);">No hay capacitaciones activas.</p>
+                <% } %>
+              </div>
+            </div>
+
+            <div class="full-width" style="margin-top: 2rem;">
+              <button type="submit" class="btn-primary">
+                Guardar Perfil e Inscribirme
+              </button>
+            </div>
+          </form>
+        </section>
+
+      </div>
     </div>
     <script>
-      document.addEventListener('DOMContentLoaded', function() {
-        const selectTipoDoc = document.querySelector('select[name="tipodoc"]');
-        const inputDoc = document.querySelector('input[name="doc"]');
+      // Variables globales para guardar la memoria del usuario
+      let correoActual = '';
+      let cedulaActual = '';
+      let esUsuarioNuevo = true;
+      let nombreActual = ''; // Agregamos la variable para el nombre
 
-        selectTipoDoc.addEventListener('change', function() {
-          inputDoc.value = ''; // Limpiar el input cuando cambian el tipo
-          
-          if (this.value === 'Ced') {
-            // Reglas para Cédula (Solo números)
-            inputDoc.setAttribute('pattern', '^\\d{6,9}$');
-            inputDoc.setAttribute('minlength', '6');
-            inputDoc.setAttribute('maxlength', '9');
-            inputDoc.setAttribute('title', 'Ingresa entre 6 y 9 números (sin puntos ni letras)');
-            inputDoc.placeholder = "Ej. 12345678";
-          } else {
-            // Reglas para Pasaporte / Otro (Letras y números)
-            inputDoc.setAttribute('pattern', '^[a-zA-Z0-9]{6,20}$');
-            inputDoc.setAttribute('minlength', '6');
-            inputDoc.setAttribute('maxlength', '20');
-            inputDoc.setAttribute('title', 'Ingresa entre 6 y 20 caracteres (letras y números, sin espacios)');
-            inputDoc.placeholder = "Ej. PA123456";
+      // DOM Elements
+      const step1 = document.getElementById('step-1-identity');
+      const step2 = document.getElementById('step-2-otp');
+      const step3Existente = document.getElementById('step-3-existente');
+      const step3Nuevo = document.getElementById('step-3-nuevo');
+      const btnSolicitar = document.getElementById('btn-solicitar');
+      const btnValidar = document.getElementById('btn-validar');
+
+      async function solicitarOTP() {
+          const cedula = document.getElementById('auth-cedula').value.trim();
+          const email = document.getElementById('auth-email').value.trim();
+
+          if(!cedula || !email) {
+              alert("Por favor, llena ambos campos.");
+              return;
           }
-        });
-      });
+
+          btnSolicitar.innerText = "Enviando correo...";
+          btnSolicitar.disabled = true;
+
+          try {
+              const response = await fetch('/api/solicitar-otp', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ cedula, email })
+              });
+
+              const data = await response.json();
+
+              if(data.success) {
+                  correoActual = email;
+                  cedulaActual = cedula;
+                  esUsuarioNuevo = data.esNuevo;
+                  nombreActual = data.nombre; // Guardamos el nombre que responde la BD
+                  
+                  document.getElementById('otp-subtitle').innerText = `Hemos enviado un código a ${email}`;
+                  step1.style.display = 'none';
+                  step2.style.display = 'block';
+              } else {
+                  alert("Error: " + data.message);
+              }
+          } catch (error) {
+              alert("Error de conexión con el servidor.");
+          } finally {
+              btnSolicitar.innerText = "Enviar Código de Acceso";
+              btnSolicitar.disabled = false;
+          }
+      }
+
+      async function validarOTP() {
+          const codigo = document.getElementById('auth-codigo').value.trim();
+
+          if(codigo.length !== 6) {
+              alert("El código debe tener 6 dígitos.");
+              return;
+          }
+
+          btnValidar.innerText = "Verificando...";
+          btnValidar.disabled = true;
+
+          try {
+              const response = await fetch('/api/validar-otp', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ email: correoActual, codigo })
+              });
+
+              const data = await response.json();
+
+              if(data.success) {
+                  step2.style.display = 'none';
+                  
+                  // --- LA BIFURCACIÓN MÁGICA ---
+                  if(esUsuarioNuevo) {
+                      // NUEVO: Llenamos los inputs ocultos
+                      document.getElementById('hidden-doc').value = cedulaActual;
+                      document.getElementById('hidden-email').value = correoActual;
+
+                      step3Nuevo.style.display = 'block';
+                  } else {
+                      document.getElementById('welcome-user-name').innerText = '¡Hola, ' + nombreActual + '!';
+                      step3Existente.style.display = 'block';
+                  }
+              } else {
+                  alert(data.message);
+              }
+          } catch (error) {
+              alert("Error de conexión con el servidor.");
+          } finally {
+              btnValidar.innerText = "Verificar y Continuar";
+              btnValidar.disabled = false;
+          }
+      }
+
+      function volverPaso1() {
+          step2.style.display = 'none';
+          step1.style.display = 'block';
+          document.getElementById('auth-codigo').value = '';
+      }
+
+      // Funciones temporales para los botones del panel existente
+      function abrirNuevaInscripcion() { alert("Próximamente: Mostraremos la lista de cursos disponibles."); }
+      function abrirReportePago() { alert("Próximamente: Mostraremos tus pagos pendientes."); }
     </script>
   </body>
 </html>

@@ -3,13 +3,13 @@
   --brand-orange: #ff5500;
   --brand-blue: #455a9f;
 
-  --background: #f8fafc; /* Color de fondo general */
+  --background: #f8fafc;
   --foreground: #0b2540;
   
   --card: #ffffff;
   --card-foreground: #0b2540;
   
-  --primary: #f95618; /* Priorizando el naranja vibrante del final */
+  --primary: #f95618;
   --primary-foreground: #ffffff;
   
   --secondary: #eaf3ff;
@@ -36,9 +36,9 @@ body {
   font-family: var(--font-family-body);
 }
 
-/* Layout Principal */
+/* Layout Principal (Ahora usa el mismo gradiente elegante) */
 .export-wrapper {
-  background-color: var(--background);
+  background: linear-gradient(135deg, #f0f4f8 0%, #d9e2ec 100%);
   color: var(--foreground);
   width: 100%;
   min-height: 100vh;
@@ -51,27 +51,27 @@ body {
 /* Contenedor del Login */
 .login-container {
   width: 100%;
-  max-width: 400px;
+  max-width: 420px; /* Un poquito más ancho para que respire */
   padding: 1rem;
 }
 
 .brand-title {
-  text-align: center;
-  font-weight: 700;
-  font-size: 1.5rem;
-  color: var(--brand-blue);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
   margin-bottom: 2rem;
 }
 
-/* Tarjeta del Formulario */
+/* Tarjeta del Formulario (Efecto profundidad aplicado) */
 .login-card {
   background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 16px;
+  box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.08);
   padding: 2.5rem;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.login-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 15px 50px -10px rgba(0, 0, 0, 0.1);
 }
 
 .card-header {
@@ -79,17 +79,34 @@ body {
   margin-bottom: 2rem;
 }
 
+/* Adorno sutil en el título */
 .card-header h1 {
-  font-size: 1.25rem;
+  font-size: 1.35rem;
   font-weight: 600;
-  color: var(--foreground);
+  color: var(--brand-blue);
   margin: 0 0 0.5rem 0;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 8px;
+}
+
+.card-header h1::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 0;
+  width: 40px;
+  height: 3px;
+  background-color: var(--brand-orange);
+  border-radius: 2px;
 }
 
 .card-header p {
   font-size: 0.875rem;
   color: var(--muted-foreground);
   margin: 0;
+  margin-top: 8px;
 }
 
 /* Inputs y Labels */
@@ -110,27 +127,28 @@ body {
 }
 
 .input {
-  height: 40px;
+  height: 42px; /* Un poco más alto para mayor comodidad */
   padding: 0 1rem;
   border-radius: var(--radius);
-  border: 1px solid var(--border); /* Corregido para usar var(--border) */
+  border: 1px solid var(--border);
   background-color: var(--input);
   color: var(--foreground);
   font-size: 0.875rem;
   width: 100%;
   outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
 }
 
 .input:focus {
   border-color: var(--ring);
-  box-shadow: 0 0 0 1px var(--ring);
+  box-shadow: 0 0 0 3px rgba(255, 85, 0, 0.1);
+  background-color: #fff;
 }
 
-/* Botones */
+/* Botón interactivo */
 .btn-primary {
-  height: 44px;
-  background-color: var(--primary);
+  height: 46px;
+  background: linear-gradient(135deg, #ff7300 0%, #e64d00 100%);
   color: var(--primary-foreground);
   border: none;
   border-radius: var(--radius);
@@ -141,15 +159,16 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: opacity 0.2s;
-  margin-top: 1.5rem;
+  box-shadow: 0 4px 14px 0 rgba(255, 85, 0, 0.39);
+  transition: all 0.2s ease;
+  margin-top: 2rem;
 }
 
 .btn-primary:hover {
-  opacity: 0.9;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 85, 0, 0.4);
 }
 
-/* Clase creada para reemplazar el estilo inline del icono */
 .btn-icon-wrapper {
   width: 20px;
   height: 20px;
@@ -159,17 +178,17 @@ body {
   justify-content: center;
 }
 
-/* Enlace Volver */
+/* Enlace Volver más dinámico */
 .back-link {
-  display: block;
-  text-align: center;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
   margin-top: 1.5rem;
   font-size: 0.875rem;
   color: var(--brand-blue);
   text-decoration: none;
   font-weight: 500;
-}
-
-.back-link:hover {
-  text-decoration: underline;
+  transition: all 0.2s ease;
+  width: 100%; /* ¡Esta es la línea mágica que lo centra! */
 }

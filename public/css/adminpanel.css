@@ -265,3 +265,56 @@ body { background-color: var(--bg-color); color: var(--text-main); }
     color: #ef4444;
     background-color: rgba(239, 68, 68, 0.1);
 }
+
+/* Contenedor azul para el logo en el Login */
+.login-logo-wrapper {
+  background-color: var(--brand-blue);
+  padding: 12px 24px;
+  border-radius: var(--radius);
+  box-shadow: 0 4px 12px rgba(69, 90, 159, 0.25);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s ease;
+}
+
+.login-logo-wrapper:hover {
+  transform: translateY(-2px);
+}
+
+/* --- ANIMACIONES Y EFECTOS HOVER (UI/UX) --- */
+
+/* 1. Tarjetas de Estadísticas (Dashboard) */
+.stat-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid transparent;
+}
+
+.stat-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 12px 20px -8px rgba(69, 90, 159, 0.15); /* Sombra con el azul corporativo */
+    border-color: rgba(69, 90, 159, 0.2);
+}
+
+/* 2. Tarjetas de Ofertas Activas (Dashboard) */
+.admin-offer-card {
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 1px solid var(--border);
+}
+
+.admin-offer-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px -6px rgba(255, 85, 0, 0.2); /* Sombra con el naranja corporativo */
+    border-color: var(--brand-orange, #ff5500);
+}
+
+/* 3. Filas de la tabla (Módulo de Ofertas / Historial) */
+.table-container tbody tr {
+    transition: all 0.2s ease;
+}
+
+.table-container tbody tr:hover {
+    background-color: rgba(69, 90, 159, 0.03); /* Un fondo azulito súper claro */
+    transform: scale(1.002); /* Un micro-crecimiento para resaltar la fila entera */
+    box-shadow: 0 4px 10px rgba(0,0,0,0.02);
+}
