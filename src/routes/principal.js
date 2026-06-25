@@ -9,6 +9,15 @@ const adminController = require('../controllers/adminController');
 router.post('/api/solicitar-otp', publicoController.solicitarOTP);
 router.post('/api/validar-otp', publicoController.validarOTP);
 
+// --- NUEVAS RUTAS DE PAGOS ---
+router.get('/api/cursos-pendientes/:cedula', publicoController.obtenerCursosPendientes);
+router.post('/api/reportar-pago', publicoController.reportarPago);
+
+// --- NUEVAS RUTAS DE MULTI-INSCRIPCIÓN ---
+router.get('/api/ofertas-disponibles/:cedula', publicoController.obtenerOfertasDisponibles);
+router.post('/api/inscripcion-rapida', publicoController.inscripcionRapida);
+
+
 // 1. IMPORTAMOS EL GUARDIA DE SEGURIDAD
 const verificarSesion = require('../middlewares/auth');
 
@@ -92,5 +101,13 @@ router.get('/panel/ofertas/toggle/:id', verificarSesion, adminController.toggleE
 // NUEVAS RUTAS: Editar oferta
 router.get('/panel/ofertas/editar/:id', verificarSesion, adminController.mostrarEditarOferta);
 router.post('/panel/ofertas/editar/:id', verificarSesion, adminController.procesarEditarOferta);
+
+// Rutas de Módulo de Participantes y Pagos
+router.get('/panel/participantes', verificarSesion, adminController.mostrarParticipantes);
+router.post('/panel/pagos/aprobar/:id', verificarSesion, adminController.aprobarPago);
+router.post('/panel/pagos/rechazar/:id', verificarSesion, adminController.rechazarPago);
+
+// NUEVA RUTA: Edición de participante
+router.post('/panel/participantes/editar', verificarSesion, adminController.editarParticipante);
 
 module.exports = router;

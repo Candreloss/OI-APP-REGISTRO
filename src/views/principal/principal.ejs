@@ -9,10 +9,7 @@
     
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@100;200;300;400;500;600;700;800;900&family=Geist:wght@100;200;300;400;500;600;700;800;900&family=IBM+Plex+Mono:wght@100;200;300;400;500;600;700&family=IBM+Plex+Sans:wght@100;200;300;400;500;600;700&family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Nunito:wght@200;300;400;500;600;700;800;900&family=PT+Serif:wght@400;700&family=Roboto+Slab:wght@100;200;300;400;500;600;700;800;900&family=Roboto:wght@100;300;400;500;700;900&family=Shantell+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap"
-      rel="stylesheet"
-    />
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@100;200;300;400;500;600;700;800;900&family=Geist:wght@100;200;300;400;500;600;700;800;900&family=IBM+Plex+Mono:wght@100;200;300;400;500;600;700&family=IBM+Plex+Sans:wght@100;200;300;400;500;600;700&family=Inter:wght@100;200;300;400;500;600;700;800;900&family=Nunito:wght@200;300;400;500;600;700;800;900&family=PT+Serif:wght@400;700&family=Roboto+Slab:wght@100;200;300;400;500;600;700;800;900&family=Roboto:wght@100;300;400;500;700;900&family=Shantell+Sans:wght@300;400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
 
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
@@ -107,6 +104,91 @@
           </div>
         </section>
 
+        <section class="form-card" id="step-3-pago" style="display: none; width: 100%; max-width: 600px;">
+          <div class="form-header">
+            <h2>Reportar Pago</h2>
+            <p class="form-subtitle">Ingresa los datos exactos de la cuenta bancaria desde donde se realizó el pago.</p>
+          </div>
+
+          <form action="/api/reportar-pago" method="POST" id="form-pago" style="margin-top: 1.5rem;">
+            <input type="hidden" name="doc_pago" id="hidden-doc-pago" />
+
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+              <label class="label" style="color: var(--brand-blue); font-weight: 700;">1. ¿Qué capacitación estás pagando?</label>
+              <div class="select-wrapper">
+                <select name="curso_pagado" id="select-cursos-pendientes" class="input" required>
+                  <option value="" disabled selected>Cargando tus cursos pendientes...</option>
+                </select>
+              </div>
+            </div>
+
+            <label class="label" style="color: var(--brand-blue); font-weight: 700; margin-bottom: 1rem; display: block;">2. Datos del Titular de la Cuenta</label>
+            
+            <div class="form-grid">
+              <div class="form-group">
+                <label class="label">Nombre del Titular</label>
+                <input name="titular_nombre" type="text" class="input" placeholder="Ej. Maria" required />
+              </div>
+
+              <div class="form-group">
+                <label class="label">Apellido del Titular</label>
+                <input name="titular_apellido" type="text" class="input" placeholder="Ej. Mendoza" required />
+              </div>
+
+              <div class="form-group">
+                <label class="label">Banco de Origen</label>
+                <input name="banco_origen" type="text" class="input" placeholder="Ej. Banesco, Mercantil..." required />
+              </div>
+
+              <div class="form-group">
+                <label class="label">Número de Referencia</label>
+                <input name="referencia" type="text" class="input" placeholder="Últimos 6 dígitos" required />
+              </div>
+
+              <div class="form-group full-width">
+                <label class="label">Teléfono asociado al pago (Pago Móvil / Zelle)</label>
+                <input name="titular_telefono" type="text" class="input" placeholder="Ej. 04141234567" required />
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+              <button type="button" class="btn-secondary" onclick="volverPanelExistente()" style="width: 100%; justify-content: center; background: transparent; border: 1px solid var(--border); color: var(--text-main);">
+                Cancelar
+              </button>
+              <button type="submit" class="btn-primary" style="margin-top: 0;">
+                Enviar Reporte
+              </button>
+            </div>
+          </form>
+        </section>
+
+        <section class="form-card" id="step-3-nueva-inscripcion" style="display: none; width: 100%; max-width: 500px;">
+          <div class="form-header">
+            <h2>Nueva Inscripción</h2>
+            <p class="form-subtitle">Selecciona la capacitación a la que deseas unirte.</p>
+          </div>
+          
+          <form onsubmit="procesarInscripcionRapida(event)" style="margin-top: 1.5rem;">
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+              <label class="label" style="color: var(--brand-blue); font-weight: 700;">Capacitaciones Disponibles para ti:</label>
+              <div class="select-wrapper">
+                <select id="select-nuevas-ofertas" class="input" required>
+                  <option value="" disabled selected>Buscando capacitaciones...</option>
+                </select>
+              </div>
+            </div>
+
+            <div style="display: flex; gap: 1rem; margin-top: 2rem;">
+              <button type="button" class="btn-secondary" onclick="volverDesdeNuevaInscripcion()" style="width: 100%; justify-content: center; background: transparent; border: 1px solid var(--border); color: var(--text-main);">
+                Cancelar
+              </button>
+              <button type="submit" class="btn-primary" style="margin-top: 0; width: 100%;">
+                Inscribirme Ahora
+              </button>
+            </div>
+          </form>
+        </section>
+
         <section class="form-card" id="step-3-nuevo" style="display: none; width: 100%; max-width: 800px;">
           <div class="form-header">
             <h2>Completa tu Perfil</h2>
@@ -114,12 +196,10 @@
           </div>
           
           <form action="/registro" method="POST" style="margin-top: 1.5rem;">
-            
             <input type="hidden" name="doc" id="hidden-doc" />
             <input type="hidden" name="email" id="hidden-email" />
 
             <div class="form-grid">
-              
               <div class="form-group full-width">
                 <label class="label">¿Qué tipo de documento ingresaste al inicio?</label>
                 <div class="select-wrapper">
@@ -231,18 +311,20 @@
 
       </div>
     </div>
+
     <script>
-      // Variables globales para guardar la memoria del usuario
       let correoActual = '';
       let cedulaActual = '';
       let esUsuarioNuevo = true;
-      let nombreActual = ''; // Agregamos la variable para el nombre
+      let nombreActual = '';
 
-      // DOM Elements
       const step1 = document.getElementById('step-1-identity');
       const step2 = document.getElementById('step-2-otp');
       const step3Existente = document.getElementById('step-3-existente');
+      const step3Pago = document.getElementById('step-3-pago');
+      const step3NuevaInsc = document.getElementById('step-3-nueva-inscripcion');
       const step3Nuevo = document.getElementById('step-3-nuevo');
+      
       const btnSolicitar = document.getElementById('btn-solicitar');
       const btnValidar = document.getElementById('btn-validar');
 
@@ -271,7 +353,7 @@
                   correoActual = email;
                   cedulaActual = cedula;
                   esUsuarioNuevo = data.esNuevo;
-                  nombreActual = data.nombre; // Guardamos el nombre que responde la BD
+                  nombreActual = data.nombre;
                   
                   document.getElementById('otp-subtitle').innerText = `Hemos enviado un código a ${email}`;
                   step1.style.display = 'none';
@@ -310,12 +392,9 @@
               if(data.success) {
                   step2.style.display = 'none';
                   
-                  // --- LA BIFURCACIÓN MÁGICA ---
                   if(esUsuarioNuevo) {
-                      // NUEVO: Llenamos los inputs ocultos
                       document.getElementById('hidden-doc').value = cedulaActual;
                       document.getElementById('hidden-email').value = correoActual;
-
                       step3Nuevo.style.display = 'block';
                   } else {
                       document.getElementById('welcome-user-name').innerText = '¡Hola, ' + nombreActual + '!';
@@ -338,9 +417,94 @@
           document.getElementById('auth-codigo').value = '';
       }
 
-      // Funciones temporales para los botones del panel existente
-      function abrirNuevaInscripcion() { alert("Próximamente: Mostraremos la lista de cursos disponibles."); }
-      function abrirReportePago() { alert("Próximamente: Mostraremos tus pagos pendientes."); }
+      // --- FUNCIONES DEL PANEL EXISTENTE ---
+      async function abrirNuevaInscripcion() { 
+          step3Existente.style.display = 'none';
+          step3NuevaInsc.style.display = 'block';
+
+          const selectOfertas = document.getElementById('select-nuevas-ofertas');
+          selectOfertas.innerHTML = '<option value="" disabled selected>Buscando capacitaciones...</option>';
+
+          try {
+              const response = await fetch(`/api/ofertas-disponibles/${cedulaActual}`);
+              const ofertas = await response.json();
+
+              if(ofertas.length > 0) {
+                  selectOfertas.innerHTML = '<option value="" disabled selected>Selecciona una capacitación</option>';
+                  ofertas.forEach(o => {
+                      selectOfertas.innerHTML += `<option value="${o.capofcodigo}">${o.capnombre} (Código: ${o.capofcodigo})</option>`;
+                  });
+              } else {
+                  selectOfertas.innerHTML = '<option value="" disabled selected>Ya estás inscrito en todos los cursos activos</option>';
+              }
+          } catch (error) {
+              selectOfertas.innerHTML = '<option value="" disabled selected>Error al cargar capacitaciones</option>';
+          }
+      }
+
+      function volverDesdeNuevaInscripcion() {
+          step3NuevaInsc.style.display = 'none';
+          step3Existente.style.display = 'block';
+      }
+
+      async function procesarInscripcionRapida(event) {
+          event.preventDefault(); 
+          const capacitacion = document.getElementById('select-nuevas-ofertas').value;
+          
+          if(!capacitacion) {
+              alert("Por favor selecciona una capacitación.");
+              return;
+          }
+
+          try {
+              const response = await fetch('/api/inscripcion-rapida', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ cedula: cedulaActual, capacitacion: capacitacion })
+              });
+
+              const data = await response.json();
+
+              if(data.success) {
+                  alert(data.message);
+                  volverDesdeNuevaInscripcion();
+              } else {
+                  alert("Error: " + data.message);
+              }
+          } catch (error) {
+              alert("Error de conexión con el servidor.");
+          }
+      }
+
+      async function abrirReportePago() { 
+          step3Existente.style.display = 'none';
+          step3Pago.style.display = 'block';
+          document.getElementById('hidden-doc-pago').value = cedulaActual;
+
+          const selectCursos = document.getElementById('select-cursos-pendientes');
+          selectCursos.innerHTML = '<option value="" disabled selected>Buscando tus inscripciones pendientes...</option>';
+
+          try {
+              const response = await fetch(`/api/cursos-pendientes/${cedulaActual}`);
+              const cursos = await response.json();
+
+              if(cursos.length > 0) {
+                  selectCursos.innerHTML = '<option value="" disabled selected>Selecciona un curso</option>';
+                  cursos.forEach(c => {
+                      selectCursos.innerHTML += `<option value="${c.inscodigo}">${c.capnombre} (Inscripción #${c.inscodigo})</option>`;
+                  });
+              } else {
+                  selectCursos.innerHTML = '<option value="" disabled selected>No tienes pagos pendientes registrados</option>';
+              }
+          } catch (error) {
+              selectCursos.innerHTML = '<option value="" disabled selected>Error al cargar cursos</option>';
+          }
+      }
+
+      function volverPanelExistente() {
+          step3Pago.style.display = 'none';
+          step3Existente.style.display = 'block';
+      }
     </script>
   </body>
 </html>
