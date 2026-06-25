@@ -2,6 +2,7 @@
 const dbConnection = require('../config/database');
 const connection = dbConnection();
 const bcrypt = require('bcryptjs');
+const transporter = require('../utils/mailer');
 
 const adminController = {};
 
@@ -123,6 +124,144 @@ adminController.procesarEditarOferta = (req, res) => {
         const timestamp = new Date().toLocaleString('es-VE');
         console.log(`[AUDITORÍA] [${timestamp}] - OFERTA EDITADA  | Admin: ${req.session.admin.username} | Oferta ID: ${id}`);
         res.send('<script>alert("¡Oferta actualizada con éxito!"); window.location.href="/panel/ofertas";</script>');
+    });
+};
+
+// --- MOSTRAR MÓDULO DE PARTICIPANTES Y PAGOS ---
+adminController.mostrarParticipantes = (req, res) => {
+    // Traemos todo: Inscripción, Persona, Curso y Pago (si existe)
+    const query = `
+        SELECT 
+            i.inscodigo, i.ins_estado, DATE_FORMAT(i.ins_fecha, '%d/%m/%Y') as fecha_formateada,
+            p.perdoc, p.pernombre, p.perapellido, p.pertelefono, p.peremail, p.perpais, p.perciudad,
+            c.capnombre,
+            pr.titular_nombre, pr.titular_apellido, pr.banco_origen, pr.referencia, pr.titular_telefono as tlf_pago
+        FROM inscripcion i
+        JOIN persona p ON i.ins_perdoc = p.perdoc
+        JOIN capacitacion_oferta co ON i.ins_oferta = co.capofcodigo
+        JOIN capacitacion c ON co.capofcapcodigo = c.capcodigo
+        LEFT JOIN pago_reportado pr ON i.inscodigo = pr.pago_inscodigo
+        ORDER BY i.ins_fecha DESC
+    `;
+
+    connection.query(query, (err, resultados) => {
+        if (err) {
+            console.error('Error cargando participantes:', err);
+            return res.render('admin/participantes', { 
+                title: 'Participantes y Pagos', 
+                admin: req.session.admin, 
+                inscripciones: [] 
+            });
+        }
+        
+        // Enviamos los resultados reales a la vista
+        res.render('admin/participantes', { 
+            title: 'Participantes y Pagos', 
+            admin: req.session.admin, 
+            inscripciones: resultados 
+        });
+    });
+};
+
+// --- APROBAR Y CONCILIAR PAGO ---
+adminController.aprobarPago = (req, res) => {
+    const inscodigo = req.params.id;
+
+    // 1. Actualizamos el estado a conciliado
+    connection.query("UPDATE inscripcion SET ins_estado = 'conciliado' WHERE inscodigo = ?", [inscodigo], (err) => {
+        if (err) return res.status(500).json({ success: false, message: 'Error al actualizar base de datos' });
+
+        // 2. Buscamos los datos del usuario para el correo
+        const queryEmail = `
+            SELECT p.peremail, p.pernombre, c.capnombre 
+            FROM inscripcion i
+            JOIN persona p ON i.ins_perdoc = p.perdoc
+            JOIN capacitacion_oferta co ON i.ins_oferta = co.capofcodigo
+            JOIN capacitacion c ON co.capofcapcodigo = c.capcodigo
+            WHERE i.inscodigo = ?
+        `;
+        
+        connection.query(queryEmail, [inscodigo], async (err2, resultados) => {
+            if (!err2 && resultados.length > 0) {
+                const { peremail, pernombre, capnombre } = resultados[0];
+                try {
+                    await transporter.sendMail({
+                        from: '"Organización Inteligente" <1001.31025923.ucla@gmail.com>', // Cambia esto si es necesario
+                        to: peremail,
+                        subject: '✅ ¡Pago Verificado! - Organización Inteligente',
+                        html: `<h3>¡Hola, ${pernombre}!</h3>
+                               <p>Nos complace informarte que hemos verificado tu pago exitosamente.</p>
+                               <p>Tu inscripción en <b>${capnombre}</b> está 100% confirmada.</p>
+                               <p>Pronto recibirás más detalles sobre el inicio de clases.</p>`
+                    });
+                } catch (e) { console.error("Error enviando correo de aprobación:", e); }
+            }
+            res.json({ success: true, message: 'Pago conciliado y correo enviado.' });
+        });
+    });
+};
+
+// --- RECHAZAR PAGO (Eliminar reporte) ---
+adminController.rechazarPago = (req, res) => {
+    const inscodigo = req.params.id;
+
+    // 1. Borramos el pago de la tabla pago_reportado
+    connection.query("DELETE FROM pago_reportado WHERE pago_inscodigo = ?", [inscodigo], (err) => {
+        if (err) return res.status(500).json({ success: false, message: 'Error al borrar el reporte' });
+
+        // 2. Devolvemos la inscripción a estado 'pendiente'
+        connection.query("UPDATE inscripcion SET ins_estado = 'pendiente' WHERE inscodigo = ?", [inscodigo], (err2) => {
+            if (err2) return res.status(500).json({ success: false, message: 'Error al actualizar estado' });
+
+            // 3. Buscamos datos para avisarle por correo
+            const queryEmail = `
+                SELECT p.peremail, p.pernombre, c.capnombre 
+                FROM inscripcion i
+                JOIN persona p ON i.ins_perdoc = p.perdoc
+                JOIN capacitacion_oferta co ON i.ins_oferta = co.capofcodigo
+                JOIN capacitacion c ON co.capofcapcodigo = c.capcodigo
+                WHERE i.inscodigo = ?
+            `;
+            
+            connection.query(queryEmail, [inscodigo], async (err3, resultados) => {
+                if (!err3 && resultados.length > 0) {
+                    const { peremail, pernombre, capnombre } = resultados[0];
+                    try {
+                        await transporter.sendMail({
+                            from: '"Organización Inteligente" <1001.31025923.ucla@gmail.com>',
+                            to: peremail,
+                            subject: '❌ Problema con tu pago - Organización Inteligente',
+                            html: `<h3>¡Hola, ${pernombre}!</h3>
+                                   <p>Hemos revisado tu reporte de pago para <b>${capnombre}</b> pero no pudimos verificar la transferencia en nuestras cuentas.</p>
+                                   <p>Tu inscripción sigue reservada, pero ha vuelto a estado <b>Pendiente</b>.</p>
+                                   <p>Por favor, ingresa nuevamente al sistema y reporta los datos correctos del pago.</p>`
+                        });
+                    } catch (e) { console.error("Error enviando correo de rechazo:", e); }
+                }
+                res.json({ success: true, message: 'Reporte eliminado y correo enviado.' });
+            });
+        });
+    });
+};
+
+// --- EDITAR DATOS DEL PARTICIPANTE ---
+adminController.editarParticipante = (req, res) => {
+    const { doc, nombre, apellido, telefono } = req.body;
+
+    // Validación básica
+    if (!doc || !nombre || !apellido) {
+        return res.status(400).json({ success: false, message: 'El nombre y apellido son obligatorios.' });
+    }
+
+    // Actualizamos los datos no sensibles en la tabla persona
+    const queryUpdate = `UPDATE persona SET pernombre = ?, perapellido = ?, pertelefono = ? WHERE perdoc = ?`;
+    
+    connection.query(queryUpdate, [nombre, apellido, telefono, doc], (err) => {
+        if (err) {
+            console.error('Error al actualizar participante:', err);
+            return res.status(500).json({ success: false, message: 'Error interno en la base de datos.' });
+        }
+        res.json({ success: true, message: 'Datos actualizados correctamente.' });
     });
 };
 

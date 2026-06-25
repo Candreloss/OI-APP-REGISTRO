@@ -211,4 +211,117 @@ controller.validarOTP = (req, res) => {
     });
 };
 
+// --- NUEVA FUNCIÓN: Obtener cursos pendientes del usuario ---
+controller.obtenerCursosPendientes = (req, res) => {
+    const cedula = req.params.cedula;
+
+    // Hacemos un JOIN triple para traer el nombre real del curso desde la tabla 'capacitacion'
+    const query = `
+        SELECT i.inscodigo, c.capnombre 
+        FROM inscripcion i
+        JOIN capacitacion_oferta co ON i.ins_oferta = co.capofcodigo
+        JOIN capacitacion c ON co.capofcapcodigo = c.capcodigo
+        WHERE i.ins_perdoc = ? AND i.ins_estado = 'pendiente'
+    `;
+
+    connection.query(query, [cedula], (err, resultados) => {
+        if (err) {
+            console.error('Error buscando cursos pendientes:', err);
+            return res.status(500).json([]);
+        }
+        res.json(resultados); // Devolvemos la lista en formato JSON para el frontend
+    });
+};
+
+// --- NUEVA FUNCIÓN: Procesar reporte de pago ---
+controller.reportarPago = (req, res) => {
+    const { curso_pagado, titular_nombre, titular_apellido, banco_origen, referencia, titular_telefono } = req.body;
+
+    // Validación básica de seguridad
+    if (!curso_pagado || !titular_nombre || !referencia) {
+        return res.send('<script>alert("Faltan datos obligatorios para reportar el pago."); window.history.back();</script>');
+    }
+
+    // 1. Insertar la información financiera en la tabla pago_reportado
+    const queryInsert = `
+        INSERT INTO pago_reportado 
+        (pago_inscodigo, titular_nombre, titular_apellido, titular_telefono, banco_origen, referencia) 
+        VALUES (?, ?, ?, ?, ?, ?)
+    `;
+
+    connection.query(queryInsert, [curso_pagado, titular_nombre, titular_apellido, titular_telefono, banco_origen, referencia], (errInsert) => {
+        if (errInsert) {
+            console.error('Error insertando pago:', errInsert);
+            return res.status(500).send('<script>alert("Error interno al registrar el pago."); window.history.back();</script>');
+        }
+
+        // 2. Si el pago se guardó bien, actualizamos el estado de la inscripción
+        const queryUpdate = `UPDATE inscripcion SET ins_estado = 'en_revision' WHERE inscodigo = ?`;
+        
+        connection.query(queryUpdate, [curso_pagado], (errUpdate) => {
+            if (errUpdate) {
+                console.error('Error actualizando estado de inscripción:', errUpdate);
+                return res.status(500).send('<script>alert("Tu pago se guardó, pero hubo un error de sistema. Contáctanos."); window.location.href="/";</script>');
+            }
+
+            // Éxito total
+            res.send('<script>alert("¡Pago reportado con éxito! El administrador lo revisará pronto."); window.location.href="/";</script>');
+        });
+    });
+};
+
+// --- NUEVA FUNCIÓN: Obtener ofertas en las que NO está inscrito ---
+controller.obtenerOfertasDisponibles = (req, res) => {
+    const cedula = req.params.cedula;
+
+    // Buscamos ofertas activas (estatus = 1) que NO estén en el historial de inscripciones de esta persona
+    const query = `
+        SELECT co.capofcodigo, c.capnombre 
+        FROM capacitacion_oferta co
+        JOIN capacitacion c ON co.capofcapcodigo = c.capcodigo
+        WHERE co.capofestatus = 1 
+        AND co.capofcodigo NOT IN (
+            SELECT ins_oferta FROM inscripcion WHERE ins_perdoc = ?
+        )
+    `;
+
+    connection.query(query, [cedula], (err, resultados) => {
+        if (err) {
+            console.error('Error buscando ofertas disponibles:', err);
+            return res.status(500).json([]);
+        }
+        res.json(resultados);
+    });
+};
+
+// --- NUEVA FUNCIÓN: Inscripción Rápida (Usuarios Existentes) ---
+controller.inscripcionRapida = (req, res) => {
+    const { cedula, capacitacion } = req.body;
+
+    if (!cedula || !capacitacion) {
+        return res.status(400).json({ success: false, message: 'Faltan datos para la inscripción.' });
+    }
+
+    // Insertamos directo en inscripcion (ya la persona existe)
+    const queryInscripcion = `INSERT INTO inscripcion (ins_perdoc, ins_oferta) VALUES (?, ?)`;
+    
+    connection.query(queryInscripcion, [cedula, capacitacion], (err) => {
+        if (err) {
+            if (err.code === 'ER_DUP_ENTRY') {
+                return res.status(400).json({ success: false, message: 'Ya estás inscrito en esta capacitación.' });
+            }
+            console.error('Error en inscripción rápida:', err);
+            return res.status(500).json({ success: false, message: 'Error interno del servidor.' });
+        }
+
+        // Insertamos en el historial académico
+        const queryAcademico = `INSERT INTO persona_capacitacion (pcap_perdoc, pcap_oferta) VALUES (?, ?)`;
+        connection.query(queryAcademico, [cedula, capacitacion], (errAcademico) => {
+            if (errAcademico) console.error('Error en Fase Académica rápida:', errAcademico);
+            
+            res.json({ success: true, message: '¡Inscripción completada con éxito! Ya puedes reportar tu pago.' });
+        });
+    });
+};
+
 module.exports = controller;
