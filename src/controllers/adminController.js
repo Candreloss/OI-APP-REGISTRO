@@ -277,11 +277,82 @@ adminController.aprobarLoteB2B = async (req, res) => {
             await Promise.allSettled(promesasCorreos);
         }
 
+        // --- NUEVO: NOTIFICACIÓN DE APROBACIÓN A LA EMPRESA B2B ---
+        // Buscamos el correo y nombre de la empresa usando la función que creamos antes
+        const infoEmpresa = await AdminModel.obtenerInfoEmpresa(empresa_id);
+        
+        if (infoEmpresa && infoEmpresa.emp_email) {
+            await transporter.sendMail({
+                from: '"Organización Inteligente" <' + process.env.EMAIL_USER + '>',
+                to: infoEmpresa.emp_email,
+                subject: '✅ ¡Pago Corporativo Aprobado con Éxito!',
+                html: `
+                    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <h2 style="color: #10b981;">Pago Aprobado y Conciliado</h2>
+                        <p>Hola, representante de <b>${infoEmpresa.empresa_nombre}</b>.</p>
+                        <p>Nos complace informarte que el pago de tu lote de capacitaciones (Lote #${oferta_id}) ha sido <b>aprobado exitosamente</b> por nuestro equipo administrativo.</p>
+                        <p>Todos los empleados incluidos en este lote ya tienen sus cupos asegurados y han pasado a estado "Conciliado". Adicionalmente, cada uno de ellos ha recibido un correo de bienvenida individual con las instrucciones de acceso al curso.</p>
+                        <p>Gracias por confiar en Organización Inteligente para la capacitación de tu equipo.</p>
+                        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+                        <p style="font-size: 12px; color: #64748b;">Atentamente,<br>El equipo de Organización Inteligente.</p>
+                    </div>
+                `
+            });
+        }
+        // ----------------------------------------------------------
+        
         console.log(`[AUDITORÍA] - LOTE APROBADO | Admin: ${req.session.admin.username} | Empresa ID: ${empresa_id} | Total: ${empleados.length}`);
+        
+        
         res.json({ success: true, message: `¡Lote de ${empleados.length} participantes conciliado exitosamente!` });
     } catch (error) {
         console.error('Error aprobando lote B2B:', error);
         res.status(500).json({ success: false, message: 'Error interno al conciliar el lote.' });
+    }
+};
+
+// Rechazar Pago de Lote Corporativo
+adminController.rechazarPagoLote = async (req, res) => {
+    const { empresa_id, oferta_id } = req.body;
+    
+    if (!empresa_id || !oferta_id) {
+        return res.status(400).json({ success: false, message: 'Datos incompletos para procesar el rechazo.' });
+    }
+
+    try {
+        // 1. Ejecutamos el rechazo y limpieza en la base de datos
+        await AdminModel.rechazarPagoLote(empresa_id, oferta_id);
+        
+        // 2. Buscamos el correo de la empresa
+        const infoEmpresa = await AdminModel.obtenerInfoEmpresa(empresa_id);
+        
+        // 3. Enviamos el correo de alerta
+        if (infoEmpresa && infoEmpresa.emp_email) {
+            await transporter.sendMail({
+                from: '"Organización Inteligente" <' + process.env.EMAIL_USER + '>',
+                to: infoEmpresa.emp_email,
+                subject: '⚠️ Importante: Problema con tu pago corporativo',
+                html: `
+                    <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; border: 1px solid #e2e8f0; border-radius: 8px;">
+                        <h2 style="color: #ef4444;">Pago Rechazado</h2>
+                        <p>Hola, representante de <b>${infoEmpresa.empresa_nombre}</b>.</p>
+                        <p>Te informamos que nuestro equipo administrativo ha detectado un inconveniente con el comprobante de pago que subiste para tu lote de capacitaciones (Lote #${oferta_id}).</p>
+                        <p>El comprobante ha sido rechazado. Esto suele ocurrir si la imagen es ilegible, el número de referencia no coincide, o el monto es incorrecto.</p>
+                        <p><b>¿Qué debes hacer ahora?</b></p>
+                        <p>Tus empleados siguen guardados en el sistema. Por favor, ingresa nuevamente al Portal B2B de Empresas, haz clic en "Reportar Pago" y vuelve a subir el comprobante correcto.</p>
+                        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;">
+                        <p style="font-size: 12px; color: #64748b;">Atentamente,<br>El equipo de Organización Inteligente.</p>
+                    </div>
+                `
+            });
+        }
+
+        console.log(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - PAGO B2B RECHAZADO | Admin: ${req.session.admin.username} | Empresa ID: ${empresa_id}`);
+        
+        res.json({ success: true, message: 'El pago del lote ha sido rechazado y se ha notificado a la empresa por correo electrónico.' });
+    } catch (error) {
+        console.error("Error rechazando lote B2B:", error);
+        res.status(500).json({ success: false, message: 'Error interno al rechazar el lote corporativo.' });
     }
 };
 
@@ -315,5 +386,7 @@ adminController.toggleBloqueoCupos = async (req, res) => {
         res.redirect('/panel/ofertas');
     } catch (error) { res.status(500).send('Error interno'); }
 };
+
+
 
 module.exports = adminController;

@@ -112,6 +112,7 @@ controller.validarOTP = async (req, res) => {
         if (new Date() > new Date(token.expira_en)) return res.json({ success: false, message: 'El código ha expirado. Solicita uno nuevo.' });
 
         await PublicoModel.marcarTokenUsado(token.id_otp);
+        req.session.usuarioValidado = email;
         res.json({ success: true, message: 'Código validado correctamente' });
 
     } catch (error) {
@@ -266,6 +267,10 @@ controller.apiOfertasActivas = async (req, res) => {
 controller.registrarLoteEmpresa = async (req, res) => {
     const { cedula_empresa, email_empresa, capacitacion, empleados } = req.body;
     
+    if (req.session.usuarioValidado !== email_empresa) {
+    return res.status(401).json({ success: false, message: 'Acceso no autorizado o sesión expirada. Vuelve a validar tu OTP.' });
+    }
+    
     if (!empleados || empleados.length === 0) {
         return res.status(400).json({ success: false, message: 'La matriz está vacía.' });
     }
@@ -298,6 +303,11 @@ controller.registrarLoteEmpresa = async (req, res) => {
 
 controller.obtenerLoteExistente = async (req, res) => {
     const { cedula_empresa, email_empresa, capacitacion } = req.body;
+    
+    if (req.session.usuarioValidado !== email_empresa) {
+    return res.status(401).json({ success: false, message: 'Acceso no autorizado o sesión expirada. Vuelve a validar tu OTP.' });
+    }
+    
     try {
         const empresas = await PublicoModel.verificarContactoEmpresa(cedula_empresa, email_empresa);
         if (empresas.length === 0) return res.json([]);
@@ -305,6 +315,75 @@ controller.obtenerLoteExistente = async (req, res) => {
         res.json(empleados);
     } catch (error) {
         res.json([]);
+    }
+};
+
+controller.obtenerLotesPendientesEmpresa = async (req, res) => {
+    const { cedula, email } = req.body;
+    
+    // CORREGIDO: Comparamos contra 'email' que es lo que extrajimos de req.body
+    if (req.session.usuarioValidado !== email) {
+        return res.status(401).json({ success: false, message: 'Acceso no autorizado o sesión expirada. Vuelve a validar tu OTP.' });
+    }
+    
+    try {
+        const empresas = await PublicoModel.verificarContactoEmpresa(cedula, email);
+        if (empresas.length === 0) return res.status(403).json([]);
+        
+        const lotes = await PublicoModel.obtenerLotesEmpresaPendientes(empresas[0].id_contacto);
+        res.json(lotes);
+    } catch (error) {
+        res.status(500).json([]);
+    }
+};
+
+// Procesar Pago Corporativo (Lote completo)
+controller.reportarPagoB2B = async (req, res) => {
+    const { cedula_empresa, email_empresa, curso_pagado, titular_nombre, titular_apellido, banco_origen, referencia, titular_telefono } = req.body;
+    const comprobante = req.file;
+
+    if (req.session.usuarioValidado !== email_empresa) {
+        return res.status(401).json({ success: false, message: 'Sesión corporativa expirada.' });
+    }
+
+    if (!curso_pagado || !titular_nombre || !titular_apellido || !referencia || !comprobante) {
+        return res.status(400).json({ success: false, message: 'Faltan datos obligatorios o el capture.' });
+    }
+
+    try {
+        const empresas = await PublicoModel.verificarContactoEmpresa(cedula_empresa, email_empresa);
+        if (empresas.length === 0) return res.status(403).json({ success: false, message: 'Empresa no autorizada.' });
+        const empresaId = empresas[0].id_contacto;
+
+        // Buscamos a los empleados del lote
+        const pendientes = await PublicoModel.obtenerInscripcionesPendientesPorLote(empresaId, curso_pagado);
+        if (pendientes.length === 0) {
+            return res.status(400).json({ success: false, message: 'No hay empleados pendientes de pago en este lote.' });
+        }
+
+        const datosPagoBase = [titular_nombre, titular_apellido, titular_telefono, banco_origen, referencia];
+        await PublicoModel.registrarPagoB2B(pendientes, datosPagoBase, empresaId);
+
+        await transporter.sendMail({
+            from: '"Sistema B2B" <' + process.env.EMAIL_USER + '>',
+            to: process.env.ADMIN_EMAIL,
+            subject: `🏢 Pago Corporativo Reportado: Lote #${curso_pagado} (${pendientes.length} empleados)`,
+            html: `
+                <h3>Nuevo Pago de Lote Corporativo</h3>
+                <ul>
+                    <li><b>Empresa:</b> ${email_empresa}</li>
+                    <li><b>Cantidad de Empleados Pagados:</b> ${pendientes.length}</li>
+                    <li><b>Titular:</b> ${titular_nombre} ${titular_apellido}</li>
+                    <li><b>Referencia:</b> ${referencia}</li>
+                </ul>
+            `,
+            attachments: [{ filename: `comprobante_b2b_${referencia}.jpg`, content: comprobante.buffer }]
+        });
+
+        res.json({ success: true, message: `¡Pago reportado para los ${pendientes.length} empleados con éxito!` });
+    } catch (error) {
+        console.error('Error en pago B2B:', error);
+        res.status(500).json({ success: false, message: 'Error interno guardando el pago corporativo.' });
     }
 };
 

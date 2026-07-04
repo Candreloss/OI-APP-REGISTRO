@@ -212,78 +212,77 @@ PublicoModel.verificarContactoEmpresa = (cedula, email) => {
 // 13. Procesar lote masivo de inscripciones B2B con Transacciones y Pool
 PublicoModel.registrarLoteTransaccion = (empresaId, ofertaId, empleados) => {
     return new Promise((resolve, reject) => {
+        const docs = empleados.map(e => e.doc);
+        if (docs.length === 0) return resolve(true);
+
+        // PASO 1: Verificamos cuántos de estos documentos YA están inscritos en este curso
+        const queryExistentes = `SELECT COUNT(*) as ya_inscritos FROM inscripcion WHERE ins_oferta = ? AND ins_perdoc IN (?)`;
         
-        PublicoModel.verificarDisponibilidad(ofertaId, empleados.length).then(() => {
+        connection.query(queryExistentes, [ofertaId, docs], (errCount, resultsCount) => {
+            if (errCount) return reject(errCount);
+            
+            const yaInscritos = resultsCount[0].ya_inscritos;
+            
+            // PASO 2: La matemática real. Solo necesitamos cupos para la gente "nueva".
+            const nuevosRequeridos = empleados.length - yaInscritos;
 
-            // 1. Pedimos una conexión prestada al Pool
-        connection.getConnection((errPool, conn) => {
-            if (errPool) return reject(errPool);
+            // PASO 3: Solo verificamos disponibilidad si realmente hay gente nueva entrando
+            const checkDisponibilidad = nuevosRequeridos > 0 
+                ? PublicoModel.verificarDisponibilidad(ofertaId, nuevosRequeridos)
+                : Promise.resolve();
 
-            // 2. Iniciamos la transacción en esta conexión específica
-            conn.beginTransaction(errTrans => {
-                if (errTrans) {
-                    conn.release(); // Liberamos la conexión si falla el inicio
-                    return reject(errTrans);
-                }
+            checkDisponibilidad.then(() => {
+                // PASO 4: Pedimos una conexión prestada al Pool e iniciamos transacción
+                connection.getConnection((errPool, conn) => {
+                    if (errPool) return reject(errPool);
 
-                // Función recursiva para procesar a cada empleado uno por uno
-                // Dentro de registrarLoteTransaccion, reemplaza la lógica de "procesarEmpleado" por esta:
+                    conn.beginTransaction(errTrans => {
+                        if (errTrans) { conn.release(); return reject(errTrans); }
 
-                const procesarEmpleado = (index) => {
-                    if (index >= empleados.length) {
-                        return conn.commit(errCommit => {
-                            if (errCommit) return conn.rollback(() => { conn.release(); reject(errCommit); });
-                            conn.release(); resolve(true);
-                        });
-                    }
-
-                    const emp = empleados[index];
-                    
-                    // UPSERT: Si no existe lo crea, si existe (misma cédula) le actualiza los datos.
-                    const queryPersona = `
-                        INSERT INTO persona (pertipodoc, perdoc, pernombre, perapellido, perfechanac, pertelefono, peremail, perpais, perciudad) 
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                        ON DUPLICATE KEY UPDATE 
-                        pernombre=VALUES(pernombre), perapellido=VALUES(perapellido), pertelefono=VALUES(pertelefono), 
-                        peremail=VALUES(peremail), perpais=VALUES(perpais), perciudad=VALUES(perciudad), perfechanac=VALUES(perfechanac)
-                    `;
-                    const datosPersona = [emp.tipodoc, emp.doc, emp.nombre, emp.apellido, emp.fechanac, emp.telefono, emp.email, emp.pais, emp.ciudad];
-
-                    conn.query(queryPersona, datosPersona, (errPersona) => {
-                        if (errPersona) return conn.rollback(() => { conn.release(); reject(errPersona); });
-
-                        // VERIFICACIÓN INTELIGENTE: ¿Ya estaba inscrito?
-                        const checkQuery = `SELECT inscodigo FROM inscripcion WHERE ins_perdoc = ? AND ins_oferta = ?`;
-                        conn.query(checkQuery, [emp.doc, ofertaId], (errCheck, rowsCheck) => {
-                            if (errCheck) return conn.rollback(() => { conn.release(); reject(errCheck); });
-
-                            // Si ya estaba inscrito, ignoramos la inscripción y saltamos al siguiente empleado
-                            if (rowsCheck.length > 0) {
-                                return procesarEmpleado(index + 1);
+                        const procesarEmpleado = (index) => {
+                            if (index >= empleados.length) {
+                                return conn.commit(errCommit => {
+                                    if (errCommit) return conn.rollback(() => { conn.release(); reject(errCommit); });
+                                    conn.release(); resolve(true);
+                                });
                             }
 
-                            // Si es nuevo, lo inscribimos
-                            const queryInscripcion = `INSERT INTO inscripcion (ins_perdoc, ins_oferta, ins_empresa_id) VALUES (?, ?, ?)`;
-                            conn.query(queryInscripcion, [emp.doc, ofertaId, empresaId], (errInsc) => {
-                                if (errInsc) return conn.rollback(() => { conn.release(); reject(errInsc); });
+                            const emp = empleados[index];
+                            const queryPersona = `
+                                INSERT INTO persona (pertipodoc, perdoc, pernombre, perapellido, perfechanac, pertelefono, peremail, perpais, perciudad) 
+                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                                ON DUPLICATE KEY UPDATE 
+                                pernombre=VALUES(pernombre), perapellido=VALUES(perapellido), pertelefono=VALUES(pertelefono), 
+                                peremail=VALUES(peremail), perpais=VALUES(perpais), perciudad=VALUES(perciudad), perfechanac=VALUES(perfechanac)
+                            `;
+                            const datosPersona = [emp.tipodoc, emp.doc, emp.nombre, emp.apellido, emp.fechanac, emp.telefono, emp.email, emp.pais, emp.ciudad];
 
-                                const queryAcademico = `INSERT INTO persona_capacitacion (pcap_perdoc, pcap_oferta) VALUES (?, ?)`;
-                                conn.query(queryAcademico, [emp.doc, ofertaId], (errAcad) => {
-                                    if (errAcad) return conn.rollback(() => { conn.release(); reject(errAcad); });
-                                    procesarEmpleado(index + 1); 
+                            conn.query(queryPersona, datosPersona, (errPersona) => {
+                                if (errPersona) return conn.rollback(() => { conn.release(); reject(errPersona); });
+
+                                const checkQuery = `SELECT inscodigo FROM inscripcion WHERE ins_perdoc = ? AND ins_oferta = ?`;
+                                conn.query(checkQuery, [emp.doc, ofertaId], (errCheck, rowsCheck) => {
+                                    if (errCheck) return conn.rollback(() => { conn.release(); reject(errCheck); });
+                                    if (rowsCheck.length > 0) return procesarEmpleado(index + 1);
+
+                                    const queryInscripcion = `INSERT INTO inscripcion (ins_perdoc, ins_oferta, ins_empresa_id) VALUES (?, ?, ?)`;
+                                    conn.query(queryInscripcion, [emp.doc, ofertaId, empresaId], (errInsc) => {
+                                        if (errInsc) return conn.rollback(() => { conn.release(); reject(errInsc); });
+
+                                        const queryAcademico = `INSERT INTO persona_capacitacion (pcap_perdoc, pcap_oferta) VALUES (?, ?)`;
+                                        conn.query(queryAcademico, [emp.doc, ofertaId], (errAcad) => {
+                                            if (errAcad) return conn.rollback(() => { conn.release(); reject(errAcad); });
+                                            procesarEmpleado(index + 1); 
+                                        });
+                                    });
                                 });
                             });
-                        });
+                        };
+                        procesarEmpleado(0);
                     });
-                };
-
-                // Arrancamos con el primer empleado (índice 0)
-                procesarEmpleado(0);
-            });
+                });
+            }).catch(reject);
         });
-
-        }).catch(reject);
-
     });
 };
 
@@ -298,6 +297,68 @@ PublicoModel.obtenerLoteExistente = (empresaId, ofertaId) => {
         connection.query(query, [empresaId, ofertaId], (err, resultados) => {
             if (err) reject(err);
             else resolve(resultados);
+        });
+    });
+};
+
+// 15. Buscar Lotes corporativos pendientes de pago (o rechazados)
+PublicoModel.obtenerLotesEmpresaPendientes = (empresaId) => {
+    return new Promise((resolve, reject) => {
+        // ACTUALIZADO: Ahora busca estados 'pendiente' o 'rechazado'
+        const query = `
+            SELECT DISTINCT co.capofcodigo, c.capnombre 
+            FROM inscripcion i
+            JOIN capacitacion_oferta co ON i.ins_oferta = co.capofcodigo
+            JOIN capacitacion c ON co.capofcapcodigo = c.capcodigo
+            WHERE i.ins_empresa_id = ? AND i.ins_estado IN ('pendiente', 'rechazado')
+        `;
+        connection.query(query, [empresaId], (err, resultados) => {
+            if (err) reject(err); else resolve(resultados);
+        });
+    });
+};
+
+// 16. Obtener inscripciones pendientes o rechazadas de un lote corporativo
+PublicoModel.obtenerInscripcionesPendientesPorLote = (empresaId, ofertaId) => {
+    return new Promise((resolve, reject) => {
+        // ACTUALIZADO: Ahora también extrae los códigos de los rechazados para pasar a revisión
+        const query = `SELECT inscodigo FROM inscripcion WHERE ins_empresa_id = ? AND ins_oferta = ? AND ins_estado IN ('pendiente', 'rechazado')`;
+        
+        connection.query(query, [empresaId, ofertaId], (err, rows) => {
+            if (err) reject(err); else resolve(rows.map(r => r.inscodigo));
+        });
+    });
+};
+
+// 17. Registrar pago B2B (Múltiples inscripciones a la vez)
+PublicoModel.registrarPagoB2B = (inscodigosArray, datosPagoBase, empresaId) => {
+    return new Promise((resolve, reject) => {
+        connection.getConnection((err, conn) => {
+            if(err) return reject(err);
+            conn.beginTransaction(errTrans => {
+                if(errTrans) { conn.release(); return reject(errTrans); }
+
+                // Creamos una matriz para insertar un pago por CADA empleado del lote
+                const valuesPago = inscodigosArray.map(ins => [
+                    ins, empresaId, ...datosPagoBase
+                ]);
+
+                const qInsert = `INSERT INTO pago_reportado (pago_inscodigo, pago_empresa_id, titular_nombre, titular_apellido, titular_telefono, banco_origen, referencia) VALUES ?`;
+
+                conn.query(qInsert, [valuesPago], (errIns) => {
+                    if(errIns) return conn.rollback(() => { conn.release(); reject(errIns); });
+
+                    const qUpdate = `UPDATE inscripcion SET ins_estado = 'en_revision' WHERE inscodigo IN (?)`;
+                    conn.query(qUpdate, [inscodigosArray], (errUpd) => {
+                        if(errUpd) return conn.rollback(() => { conn.release(); reject(errUpd); });
+
+                        conn.commit(errCom => {
+                            if(errCom) return conn.rollback(() => { conn.release(); reject(errCom); });
+                            conn.release(); resolve(true);
+                        });
+                    });
+                });
+            });
         });
     });
 };

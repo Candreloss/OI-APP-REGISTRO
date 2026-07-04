@@ -7,9 +7,7 @@
     <link rel="icon" type="image/png" href="/img/favicon.ico">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
     <script src="https://cdn.tailwindcss.com"></script>
-    
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
-    
     <link rel="stylesheet" href="/css/stylesprincipal.css" />
 </head>
 <body>
@@ -27,7 +25,7 @@
         </nav>
 
         <div class="main-container" id="app-container" style="max-width: 98% !important;">
-            <!-- PASO 1: SOLICITAR ACCESO -->
+            
             <section class="form-card" id="step-1-empresa">
                 <div class="form-header">
                     <h2 style="color: #10b981;">Portal Empresas B2B</h2>
@@ -48,7 +46,6 @@
                 </div>
             </section>
 
-            <!-- PASO 2: VERIFICAR OTP -->
             <section class="form-card" id="step-2-otp-emp" style="display: none;">
                 <div class="form-header">
                     <h2 style="color: #10b981;">Seguridad Corporativa</h2>
@@ -66,15 +63,70 @@
                 </div>
             </section>
 
+            <section class="form-card" id="step-pago-b2b" style="display: none; width: 100%; max-width: 600px;">
+                <div class="form-header">
+                    <h2>Reportar Pago Corporativo</h2>
+                    <p class="form-subtitle">Reporta el pago de un lote de capacitación completo.</p>
+                </div>
+                <form onsubmit="procesarPagoB2B(event)" enctype="multipart/form-data" id="form-pago-b2b">
+                    <div class="form-group" style="margin-bottom: 1rem;">
+                        <label class="label">Lote / Capacitación Pagada:</label>
+                        <select name="curso_pagado" id="select-lotes-empresa" class="input" required></select>
+                        <input type="hidden" name="cedula_empresa" id="pago-cedula-emp" />
+                        <input type="hidden" name="email_empresa" id="pago-email-emp" />
+                    </div>
+                    
+                    <div class="form-grid" style="grid-template-columns: 1fr 1fr;">
+                        <div class="form-group">
+                            <label class="label">Nombre del Titular</label>
+                            <input name="titular_nombre" type="text" class="input" placeholder="Ej. Maria" required />
+                        </div>
+                        <div class="form-group">
+                            <label class="label">Apellido del Titular</label>
+                            <input name="titular_apellido" type="text" class="input" placeholder="Ej. Mendoza" required />
+                        </div>
+                        <div class="form-group">
+                            <label class="label">Banco de Origen</label>
+                            <input name="banco_origen" type="text" class="input" placeholder="Ej. Banesco" required />
+                        </div>
+                        <div class="form-group">
+                            <label class="label">Nro. Referencia</label>
+                            <input name="referencia" type="text" class="input" placeholder="Últimos 6 dígitos" required />
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label class="label">Teléfono Asociado al Pago</label>
+                            <input name="titular_telefono" type="text" class="input" placeholder="Ej. 04141234567" required />
+                        </div>
+                        <div class="form-group" style="grid-column: span 2;">
+                            <label class="label">Capture de Transferencia</label>
+                            <input type="file" name="comprobante" class="input" accept="image/*" required />
+                        </div>
+                    </div>
+
+                    <div style="margin-top: 1.5rem; display: flex; gap: 1rem;">
+                        <button type="button" onclick="volverAlMenuB2B()" class="btn-secondary" style="margin-top: 1rem; width: 100%; justify-content: center; background: transparent; border: 1px solid var(--border); color: var(--text-main);">Volver</button>
+                        <button type="submit" class="btn-primary">Enviar Reporte</button>
+                    </div>
+                </form>
+            </section>
+
             <section class="form-card" id="step-3-matriz" style="display: none; max-width: 1300px; width: 100%;">
+                
                 <div class="form-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 1.5rem;">
                     <div>
                         <h2 style="color: #10b981; font-size: 1.5rem;">Matriz de Inscripción</h2>
                         <p class="form-subtitle" id="nombre-empresa-auth">Empresa Autorizada</p>
                     </div>
-                    <div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
-                        <label style="font-size: 0.8rem; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">Capacitación a Inscribir (Aplica para todo el lote)</label>
-                        <select id="select-capacitacion-lote" class="input" onchange="cargarLoteExistente()" style="min-width: 250px; padding: 5px; height: auto;" required></select>
+                    
+                    <div style="display: flex; align-items: center; gap: 1rem;">
+                        <button type="button" onclick="abrirReportePagoB2B()" class="btn-primary" style="background: #f59e0b; box-shadow: none; border: none; height: 44px; margin-top: 0; padding: 0 1rem; width: auto; font-size: 0.85rem;">
+                            <iconify-icon icon="lucide:dollar-sign" style="font-size: 16px; margin-right: 4px;"></iconify-icon> Reportar Pago Lote
+                        </button>
+                        
+                        <div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                            <label style="font-size: 0.8rem; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">Capacitación a Inscribir</label>
+                            <select id="select-capacitacion-lote" class="input" onchange="cargarLoteExistente()" style="min-width: 250px; padding: 5px; height: auto;" required></select>
+                        </div>
                     </div>
                 </div>
 
@@ -94,7 +146,7 @@
                             </tr>
                         </thead>
                         <tbody id="tabla-empleados">
-                            </tbody>
+                        </tbody>
                     </table>
                 </div>
 
@@ -102,8 +154,7 @@
                     <button type="button" class="btn-secondary" onclick="agregarFilaMatriz()" style="background: transparent; color: #10b981; border: 1px dashed #10b981;">
                         + Agregar Nuevo Empleado
                     </button>
-                    
-                    <button type="button" class="btn-primary" id="btn-enviar-lote" onclick="enviarLoteEmpresa()" style="background: #10b981; width: auto; padding: 0 30px;">
+                    <button type="button" class="btn-primary" id="btn-enviar-lote" onclick="enviarLoteEmpresa()" style="background: #10b981; width: auto; padding: 0 30px; margin-top: 0;">
                         Guardar Lote Completo
                     </button>
                 </div>
@@ -113,12 +164,11 @@
 
     <script>
         let correoEmpresa = '';
-        let cedulaEmpresa = ''; // Necesitamos esto para validar la transacción final
+        let cedulaEmpresa = ''; 
 
         async function solicitarOTPCorporativo() {
             const cedula = document.getElementById('emp-doc').value.trim();
             const email = document.getElementById('emp-email').value.trim();
-
             if(!cedula || !email) return alert("Llena ambos campos.");
 
             const btn = document.getElementById('btn-solicitar-emp');
@@ -134,7 +184,7 @@
 
                 if(data.success) {
                     correoEmpresa = email;
-                    cedulaEmpresa = cedula; // Guardamos para la transacción final
+                    cedulaEmpresa = cedula; 
                     document.getElementById('otp-subtitle-emp').innerText = `Enviado a ${email}`;
                     document.getElementById('step-1-empresa').style.display = 'none';
                     document.getElementById('step-2-otp-emp').style.display = 'block';
@@ -164,12 +214,10 @@
                 const data = await response.json();
 
                 if(data.success) {
-                    // Ocultamos OTP y mostramos la Matriz
                     document.getElementById('step-2-otp-emp').style.display = 'none';
                     document.getElementById('step-3-matriz').style.display = 'block';
                     document.getElementById('nombre-empresa-auth').innerText = `Gestión autorizada para: ${correoEmpresa}`;
                     
-                    // Cargamos los cursos y una fila vacía para empezar
                     cargarOfertasB2B();
                     agregarFilaMatriz();
                 } else {
@@ -181,8 +229,6 @@
                 btn.innerText = "Verificar Identidad"; btn.disabled = false;
             }
         }
-
-        // --- FUNCIONES DEL FORMULARIO MATRIZ --- //
 
         async function cargarOfertasB2B() {
             const select = document.getElementById('select-capacitacion-lote');
@@ -197,8 +243,8 @@
                         const bloqueado = o.cupos_bloqueados === 1;
                         let textoExtra = "";
                         
-                        if(bloqueado) textoExtra = " - [CERRADO TEMPORALMENTE]";
-                        else if(agotado) textoExtra = " - [CUPO AGOTADO]";
+                        if(bloqueado) textoExtra = " - [CERRADO]";
+                        else if(agotado) textoExtra = " - [AGOTADO]";
                         
                         select.innerHTML += `<option value="${o.capofcodigo}" ${agotado || bloqueado ? 'disabled' : ''}>
                             ${o.capnombre} (Disponibles: ${Math.max(0, o.cupos_restantes)})${textoExtra}
@@ -222,14 +268,11 @@
             const loteData = [];
             let hayErrores = false;
 
-            // Extraemos y validamos los datos de cada fila
-            filas.forEach((fila, index) => {
+            filas.forEach((fila) => {
                 const doc = fila.querySelector('.m-doc').value.trim();
                 const nombre = fila.querySelector('.m-nombre').value.trim();
                 const email = fila.querySelector('.m-email').value.trim();
                 const fecha = fila.querySelector('.m-fechanac').value;
-                
-                // NUEVO: Capturamos el código de país y el número limpio
                 const codpais = fila.querySelector('.m-codpais').value;
                 const numeroTel = fila.querySelector('.m-telefono').value.trim();
 
@@ -243,7 +286,6 @@
                         doc: doc,
                         nombre: nombre,
                         apellido: fila.querySelector('.m-apellido').value.trim(),
-                        // Concatenamos el código con el número para el backend
                         telefono: codpais + ' ' + numeroTel, 
                         email: email,
                         fechanac: fecha,
@@ -254,8 +296,7 @@
             });
 
             if (hayErrores) return alert("Por favor, corrige los campos vacíos marcados en rojo antes de enviar.");
-
-            if(!confirm(`¿Estás seguro de registrar a estos ${loteData.length} empleados de un solo golpe?`)) return;
+            if(!confirm(`¿Estás seguro de registrar a estos ${loteData.length} empleados?`)) return;
 
             const btn = document.getElementById('btn-enviar-lote');
             btn.innerText = "Procesando Lote..."; btn.disabled = true;
@@ -276,7 +317,7 @@
                 
                 if (data.success) {
                     alert(data.message);
-                    window.location.reload(); // Recargamos para dejar todo en cero
+                    window.location.reload(); 
                 } else {
                     alert(data.message);
                 }
@@ -291,7 +332,6 @@
             const capacitacionId = document.getElementById('select-capacitacion-lote').value;
             const tbody = document.getElementById('tabla-empleados');
             
-            // Limpiamos la tabla y mostramos que estamos cargando
             tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:10px;">Buscando registros previos...</td></tr>';
 
             try {
@@ -301,17 +341,24 @@
                     body: JSON.stringify({ cedula_empresa: cedulaEmpresa, email_empresa: correoEmpresa, capacitacion: capacitacionId })
                 });
                 const empleadosExistentes = await response.json();
-                
-                tbody.innerHTML = ''; // Limpiamos el mensaje
+                tbody.innerHTML = ''; 
 
                 if (empleadosExistentes.length > 0) {
                     empleadosExistentes.forEach(emp => {
-                        // Formateamos la fecha de SQL (ISO) a formato YYYY-MM-DD para el input type="date"
                         const fechaFormateada = new Date(emp.perfechanac).toISOString().split('T')[0];
-                        agregarFilaMatriz(emp.pertipodoc, emp.perdoc, emp.pernombre, emp.perapellido, emp.pertelefono, emp.peremail, fechaFormateada, emp.perpais, emp.perciudad, true);
+                        
+                        // CORRECCIÓN: Separador de teléfono para la matriz
+                        let codpais = '+58';
+                        let numero = emp.pertelefono || '';
+                        if (numero.includes(' ')) {
+                            const partes = numero.split(' ');
+                            codpais = partes[0];
+                            numero = partes.slice(1).join(' ');
+                        }
+
+                        agregarFilaMatriz(emp.pertipodoc, emp.perdoc, emp.pernombre, emp.perapellido, codpais, numero, emp.peremail, fechaFormateada, emp.perpais, emp.perciudad, true);
                     });
                 } else {
-                    // Si no hay nadie, agregamos una fila vacía para empezar
                     agregarFilaMatriz();
                 }
             } catch (e) {
@@ -319,14 +366,13 @@
             }
         }
 
-        // Modificamos agregarFilaMatriz para incluir el desplegable de código de país
-        function agregarFilaMatriz(tipodoc='', doc='', nombre='', apellido='', tel='', email='', fecha='', pais='', ciudad='', esExistente=false) {
+        // CORRECCIÓN: La función ahora recibe codpais y tel de forma separada
+        function agregarFilaMatriz(tipodoc='', doc='', nombre='', apellido='', codpais='+58', tel='', email='', fecha='', pais='', ciudad='', esExistente=false) {
             const tbody = document.getElementById('tabla-empleados');
             const tr = document.createElement('tr');
             tr.className = "matriz-row";
             
-            // Si el empleado ya existe, bloqueamos la cédula
-            const readonlyDoc = esExistente ? 'readonly style="background-color: #f1f5f9; cursor: not-allowed;" title="No puedes editar la cédula de alguien ya registrado"' : '';
+            const readonlyDoc = esExistente ? 'readonly style="background-color: #f1f5f9; cursor: not-allowed;" title="No puedes editar la cédula"' : '';
 
             tr.innerHTML = `
                 <td style="padding: 4px;"><select class="m-tipodoc input" style="padding: 5px; height: 35px; width: 55px; font-size: 0.8rem;"><option value="Ced" ${tipodoc==='Ced'?'selected':''}>V/E</option><option value="Pas" ${tipodoc==='Pas'?'selected':''}>Pas</option></select></td>
@@ -339,10 +385,13 @@
                 
                 <td style="padding: 4px; display: flex; gap: 2px;">
                     <select class="m-codpais input" style="padding: 5px; height: 35px; width: 65px; font-size: 0.8rem; flex-shrink: 0;" required>
-                        <option value="+58">+58</option><option value="+57">+57</option><option value="+54">+54</option>
-                        <option value="+56">+56</option><option value="+51">+51</option><option value="+593">+593</option>
-                        <option value="+52">+52</option><option value="+55">+55</option><option value="+598">+598</option>
-                        <option value="+595">+595</option><option value="+591">+591</option><option value="+1">+1</option><option value="+34">+34</option>
+                        <option value="+58" ${codpais==='+58'?'selected':''}>+58</option>
+                        <option value="+57" ${codpais==='+57'?'selected':''}>+57</option>
+                        <option value="+54" ${codpais==='+54'?'selected':''}>+54</option>
+                        <option value="+56" ${codpais==='+56'?'selected':''}>+56</option>
+                        <option value="+51" ${codpais==='+51'?'selected':''}>+51</option>
+                        <option value="+1" ${codpais==='+1'?'selected':''}>+1</option>
+                        <option value="+34" ${codpais==='+34'?'selected':''}>+34</option>
                     </select>
                     <input type="tel" class="m-telefono input" value="${tel}" placeholder="Teléfono" oninput="this.value = this.value.replace(/^0+/, '')" style="padding: 5px; height: 35px; width: 100%; min-width: 85px; font-size: 0.8rem;" required>
                 </td>
@@ -364,6 +413,88 @@
             `;
             tbody.appendChild(tr);
         }
+
+        // --- FUNCIONES AISLADAS DE PAGO B2B ---
+        function abrirReportePagoB2B() {
+            document.getElementById('step-3-matriz').style.display = 'none';
+            document.getElementById('step-pago-b2b').style.display = 'block';
+            cargarLotesPendientesSeguro();
+        }
+
+        function volverAlMenuB2B() {
+            document.getElementById('step-pago-b2b').style.display = 'none';
+            document.getElementById('step-3-matriz').style.display = 'block';
+        }
+
+        async function cargarLotesPendientesSeguro() {
+            const select = document.getElementById('select-lotes-empresa');
+            select.innerHTML = '<option>Cargando...</option>';
+            try {
+                const response = await fetch('/api/empresa/lotes-pendientes', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cedula: cedulaEmpresa, email: correoEmpresa })
+                });
+                const lotes = await response.json();
+                if (lotes.length > 0) {
+                    select.innerHTML = lotes.map(l => `<option value="${l.capofcodigo}">${l.capnombre} (Lote #${l.capofcodigo})</option>`).join('');
+                } else {
+                    select.innerHTML = '<option value="" disabled selected>No hay lotes pendientes de pago</option>';
+                }
+            } catch (e) { select.innerHTML = '<option value="" disabled selected>Error de red</option>'; }
+        }
+
+        async function procesarPagoB2B(event) {
+            event.preventDefault();
+            const form = document.getElementById('form-pago-b2b');
+            const formData = new FormData(form);
+            const btn = form.querySelector('button[type="submit"]');
+            
+            btn.innerText = "Enviando..."; btn.disabled = true;
+            try {
+                const response = await fetch('/api/reportar-pago', { method: 'POST', body: formData });
+                const result = await response.json();
+                alert(result.message);
+                if (result.success) {
+                    volverAlMenuB2B();
+                    form.reset();
+                }
+            } catch (error) { alert("Error de conexión al reportar."); }
+            finally { btn.innerText = "Enviar Reporte"; btn.disabled = false; }
+        }
+
+        function abrirReportePagoB2B() {
+            document.getElementById('step-3-matriz').style.display = 'none';
+            document.getElementById('step-pago-b2b').style.display = 'block';
+            
+            // Llenamos la identidad oculta
+            document.getElementById('pago-cedula-emp').value = cedulaEmpresa;
+            document.getElementById('pago-email-emp').value = correoEmpresa;
+            
+            cargarLotesPendientesSeguro();
+        }
+
+        async function procesarPagoB2B(event) {
+            event.preventDefault();
+            const form = document.getElementById('form-pago-b2b');
+            const formData = new FormData(form);
+            const btn = form.querySelector('button[type="submit"]');
+            
+            btn.innerText = "Enviando..."; btn.disabled = true;
+            try {
+                // APUNTAMOS A LA NUEVA RUTA B2B
+                const response = await fetch('/api/empresa/reportar-pago', { method: 'POST', body: formData });
+                const result = await response.json();
+                alert(result.message);
+                if (result.success) {
+                    volverAlMenuB2B();
+                    form.reset();
+                    window.location.reload();
+                }
+            } catch (error) { alert("Error de conexión al reportar."); }
+            finally { btn.innerText = "Enviar Reporte"; btn.disabled = false; }
+        }
+
     </script>
 </body>
 </html>
