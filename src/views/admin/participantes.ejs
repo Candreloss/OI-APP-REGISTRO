@@ -31,6 +31,10 @@
                     <iconify-icon icon="lucide:users"></iconify-icon>
                     <span>Participantes y Pagos</span>
                 </a>
+                <a href="/panel/empresas" class="nav-item">
+                    <iconify-icon icon="lucide:building-2"></iconify-icon>
+                    <span>Empresas B2B</span>
+                </a>
             </nav>
             <div class="sidebar-footer">
                 <a href="/logout" class="nav-item logout-btn">
@@ -52,24 +56,52 @@
             </header>
 
             <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mt-8">
+              
               <div class="flex justify-between items-center mb-6">
                 <div>
                   <h2 class="text-2xl font-bold text-gray-800">Gestión de Participantes</h2>
                   <p class="text-gray-500 text-sm">Administra inscripciones, edita perfiles y concilia pagos reportados.</p>
                 </div>
-              </div>
+                
+                <div class="flex gap-3">
+                  <div class="relative">
+                    <select id="filtro-capacitacion" onchange="aplicarFiltros()" class="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Todas las Capacitaciones...</option>
+                        <% 
+                          const capacitacionesUnicas = [...new Set(inscripciones.map(i => i.capnombre).filter(n => n))];
+                          capacitacionesUnicas.forEach(cap => { 
+                        %>
+                            <option value="<%= cap %>"><%= cap %></option>
+                        <% }); %>
+                    </select>
+                  </div>
 
+                  <div class="relative">
+                    <select id="filtro-empresa" onchange="aplicarFiltros()" class="border border-gray-300 rounded-lg px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500">
+                        <option value="">Todas las Empresas...</option>
+                        <option value="SIN_EMPRESA">Individuales</option>
+                        <% 
+                          const empresasUnicas = [...new Set(inscripciones.map(i => i.empresa_nombre).filter(n => n))];
+                          empresasUnicas.forEach(emp => { 
+                        %>
+                            <option value="<%= emp %>"><%= emp %></option>
+                        <% }); %>
+                    </select>
+                  </div>
+                </div>
+              </div>
+              
               <div class="flex gap-3 mb-6 overflow-x-auto pb-2">
-                <button class="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white shadow-sm" onclick="filtrarTabla('todas')">
+                <button class="px-4 py-2 rounded-lg text-sm font-medium bg-blue-600 text-white shadow-sm" onclick="setFiltroEstado('todas')">
                   Todas
                 </button>
-                <button class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200" onclick="filtrarTabla('pendiente')">
+                <button class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200" onclick="setFiltroEstado('pendiente')">
                   🟡 Pendientes
                 </button>
-                <button class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200" onclick="filtrarTabla('en_revision')">
+                <button class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200" onclick="setFiltroEstado('en_revision')">
                   🟠 En Revisión
                 </button>
-                <button class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200" onclick="filtrarTabla('conciliado')">
+                <button class="px-4 py-2 rounded-lg text-sm font-medium bg-gray-100 text-gray-600 hover:bg-gray-200" onclick="setFiltroEstado('conciliado')">
                   🟢 Conciliados
                 </button>
               </div>
@@ -90,11 +122,21 @@
                     <% if (inscripciones && inscripciones.length > 0) { %>
                         <% inscripciones.forEach((ins) => { %>
                             
-                            <tr class="hover:bg-gray-50 transition-colors fila-inscripcion" data-estado="<%= ins.ins_estado %>">
+                            <tr class="hover:bg-gray-50 transition-colors fila-inscripcion tabla-fila-participante" 
+                                data-estado="<%= ins.ins_estado %>" 
+                                data-empresa="<%= ins.empresa_nombre || 'SIN_EMPRESA' %>"
+                                data-capacitacion="<%= ins.capnombre %>">
+                              
                               <td class="p-4 font-mono"><%= ins.perdoc %></td>
                               <td class="p-4">
                                 <div class="font-medium text-gray-900"><%= ins.pernombre %> <%= ins.perapellido %></div>
                                 <div class="text-xs text-gray-500"><%= ins.pertelefono %></div>
+                                
+                                <% if (ins.empresa_nombre) { %>
+                                    <div class="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-medium bg-blue-50 text-blue-700 border border-blue-100 etiqueta-empresa">
+                                        <iconify-icon icon="lucide:building-2"></iconify-icon> <%= ins.empresa_nombre %>
+                                    </div>
+                                <% } %>
                               </td>
                               <td class="p-4"><%= ins.capnombre %></td>
                               <td class="p-4">
@@ -114,10 +156,14 @@
                                 </button>
                                 
                                 <% if(ins.ins_estado === 'en_revision') { %>
-                                    <button onclick="abrirModalPago('<%= ins.inscodigo %>', '<%= ins.titular_nombre %> <%= ins.titular_apellido %>', '<%= ins.banco_origen %>', '<%= ins.referencia %>')" class="p-2 text-orange-600 hover:bg-orange-50 rounded-lg" title="Revisar Pago">
+                                    <button onclick="abrirModalPago('<%= ins.inscodigo %>', '<%= ins.titular_nombre %> <%= ins.titular_apellido %>', '<%= ins.banco_origen %>', '<%= ins.referencia %>', '<%= ins.tlf_pago %>', '<%= ins.fecha_pago %>')" class="p-2 text-orange-600 hover:bg-orange-50 rounded-lg" title="Revisar Pago">
                                       <iconify-icon icon="lucide:dollar-sign" class="text-lg"></iconify-icon>
                                     </button>
                                 <% } %>
+                                
+                                <button onclick="eliminarParticipante('<%= ins.inscodigo %>', '<%= ins.pernombre %> <%= ins.perapellido %>')" class="p-2 text-red-600 hover:bg-red-50 rounded-lg" title="Eliminar Cupo">
+                                    <iconify-icon icon="lucide:trash-2" class="text-lg"></iconify-icon>
+                                </button>
                               </td>
                             </tr>
 
@@ -177,9 +223,13 @@
           <div class="bg-gray-50 rounded-lg p-4 mb-6 border border-gray-100">
             <p class="text-sm text-gray-500 mb-1">Titular de la cuenta</p>
             <p class="font-medium text-gray-900 mb-3" id="ver-titular">Maria Mendoza</p>
-            <div class="grid grid-cols-2 gap-4">
+            <div class="grid grid-cols-2 gap-4 mb-3">
               <div><p class="text-sm text-gray-500 mb-1">Banco</p><p class="font-medium text-gray-900" id="ver-banco">Banesco</p></div>
               <div><p class="text-sm text-gray-500 mb-1">Referencia</p><p class="font-mono text-gray-900 font-bold tracking-wider" id="ver-referencia">123456</p></div>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <div><p class="text-sm text-gray-500 mb-1">Teléfono Asociado</p><p class="font-medium text-gray-900" id="ver-telefono">+58 0000000</p></div>
+              <div><p class="text-sm text-gray-500 mb-1">Fecha del Reporte</p><p class="font-medium text-gray-900" id="ver-fecha">00/00/0000</p></div>
             </div>
           </div>
           <div class="flex flex-col gap-3">
@@ -191,27 +241,23 @@
     </div>
 
     <script>
-      // Variable global para guardar qué inscripción estamos revisando
       let inscripcionActiva = null;
 
-      // 1. Funciones para Abrir Modales
       function abrirModalEdicion(cedula, nombre, apellido, telefono) { 
-        // Llenamos los inputs ocultos y visibles con los datos actuales
         document.getElementById('edit-doc').value = cedula;
         document.getElementById('edit-nombre').value = nombre;
         document.getElementById('edit-apellido').value = apellido;
         document.getElementById('edit-telefono').value = telefono;
-        
         document.getElementById('modal-edicion').classList.remove('hidden'); 
       }
       
-      function abrirModalPago(inscodigo, titular, banco, referencia) { 
-        // Llenamos los datos visuales en la tarjeta del modal
+      function abrirModalPago(inscodigo, titular, banco, referencia, telefono, fecha) { 
         document.getElementById('ver-titular').innerText = titular;
         document.getElementById('ver-banco').innerText = banco;
         document.getElementById('ver-referencia').innerText = referencia;
-        
-        inscripcionActiva = inscodigo; // Guardamos el ID en la memoria
+        document.getElementById('ver-telefono').innerText = telefono;
+        document.getElementById('ver-fecha').innerText = fecha;
+        inscripcionActiva = inscodigo; 
         document.getElementById('modal-pago').classList.remove('hidden'); 
       }
       
@@ -219,9 +265,7 @@
         document.getElementById(id).classList.add('hidden'); 
       }
 
-      // 2. Funciones de Acción
       async function guardarEdicion() { 
-        // Capturamos lo que el administrador escribió
         const doc = document.getElementById('edit-doc').value;
         const nombre = document.getElementById('edit-nombre').value.trim();
         const apellido = document.getElementById('edit-apellido').value.trim();
@@ -233,19 +277,16 @@
         }
 
         try {
-            // Enviamos los datos al backend
             const response = await fetch('/panel/participantes/editar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ doc, nombre, apellido, telefono })
             });
-
             const data = await response.json();
-
             if(data.success) {
                 alert("¡Perfil actualizado con éxito!");
                 cerrarModal('modal-edicion');
-                window.location.reload(); // Recargamos para ver los cambios en la tabla
+                window.location.reload(); 
             } else {
                 alert("Error: " + data.message);
             }
@@ -253,38 +294,20 @@
             alert("Error de conexión con el servidor.");
         }
       }
-      
-      function filtrarTabla(estado) {
-        // Buscamos todas las filas que tengan la clase 'fila-inscripcion'
-        const filas = document.querySelectorAll('.fila-inscripcion');
-        
-        filas.forEach(fila => {
-            // Si el botón seleccionado es 'todas', o si el estado de la fila coincide con el botón...
-            if (estado === 'todas' || fila.getAttribute('data-estado') === estado) {
-                fila.style.display = ''; // Mostramos la fila
-            } else {
-                fila.style.display = 'none'; // Ocultamos la fila
-            }
-        });
-      }
 
-      // 3. LA FUNCIÓN ESTRELLA: Procesar Pagos con el Backend
       async function procesarPago(accion) { 
         if(!inscripcionActiva) return;
-
         let confirmacion = accion === 'aprobar' 
             ? '¿Conciliar pago y notificar al participante?' 
             : '¿Rechazar pago, eliminar reporte y notificar al participante?';
 
         if(confirm(confirmacion)) {
             try {
-                // Hacemos la petición al backend
                 const response = await fetch(`/panel/pagos/${accion}/${inscripcionActiva}`, { method: 'POST' });
                 const data = await response.json();
-
                 if(data.success) {
                     alert(data.message);
-                    window.location.reload(); // Recargamos la página para ver el cambio de color en la tabla
+                    window.location.reload(); 
                 } else {
                     alert("Error: " + data.message);
                 }
@@ -293,6 +316,62 @@
             }
         }
         cerrarModal('modal-pago'); 
+      }
+
+      async function eliminarParticipante(inscodigo, nombre) {
+          if (!confirm(`⚠️ ¡ATENCIÓN! ⚠️\n\n¿Estás seguro de que deseas ELIMINAR la inscripción de ${nombre}?\n\nEsta acción borrará su cupo y cualquier reporte de pago asociado de forma permanente.`)) return;
+          try {
+              const response = await fetch(`/panel/participantes/eliminar/${inscodigo}`, { method: 'POST' });
+              const data = await response.json();
+              if (data.success) {
+                  alert(data.message);
+                  window.location.reload(); 
+              } else {
+                  alert("Error: " + data.message);
+              }
+          } catch (error) {
+              alert("Error de red conectando con el servidor.");
+          }
+      }
+    </script>
+
+    <script>
+      let estadoActualFiltro = 'todas';
+
+      // Esta función es llamada por los botones de colores
+      function setFiltroEstado(estado) {
+          estadoActualFiltro = estado;
+          aplicarFiltros();
+      }
+
+      // Esta es la función Maestra que combina Empresa, Capacitación y Estado
+      function aplicarFiltros() {
+          const valorEmpresa = document.getElementById("filtro-empresa").value;
+          const valorCapacitacion = document.getElementById("filtro-capacitacion").value;
+          const filas = document.querySelectorAll(".fila-inscripcion"); 
+          
+          filas.forEach(fila => {
+              const estadoFila = fila.getAttribute('data-estado');
+              const empresaFila = fila.getAttribute('data-empresa');
+              const capacitacionFila = fila.getAttribute('data-capacitacion');
+              
+              let mostrarFila = true;
+
+              // Filtro 1: Por Estado (Pendiente, Revisión, etc)
+              if (estadoActualFiltro !== 'todas' && estadoFila !== estadoActualFiltro) {
+                  mostrarFila = false;
+              }
+              // Filtro 2: Por Empresa
+              if (valorEmpresa !== "" && empresaFila !== valorEmpresa) {
+                  mostrarFila = false;
+              }
+              // Filtro 3: Por Capacitación
+              if (valorCapacitacion !== "" && capacitacionFila !== valorCapacitacion) {
+                  mostrarFila = false;
+              }
+
+              fila.style.display = mostrarFila ? "" : "none";
+          });
       }
     </script>
 </body>

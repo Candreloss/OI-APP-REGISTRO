@@ -3,11 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <title><%= title %></title>
+    <link rel="icon" type="image/png" href="/img/favicon.ico">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <link rel="stylesheet" href="/css/adminpanel.css">
     <style>
-        /* Estilos específicos para la tabla de gestión */
         .table-container { background: var(--white); border-radius: var(--radius); border: 1px solid var(--border); overflow: hidden; margin: 0 32px 32px 32px;}
         table { width: 100%; border-collapse: collapse; text-align: left; }
         th, td { padding: 16px; border-bottom: 1px solid var(--border); font-size: 0.9rem;}
@@ -15,16 +15,19 @@
         .badge { padding: 4px 10px; border-radius: 50px; font-size: 0.75rem; font-weight: 600; }
         .badge.active { background: rgba(16, 185, 129, 0.1); color: #10b981; }
         .badge.inactive { background: rgba(239, 68, 68, 0.1); color: #ef4444; }
+        .badge.danger { background: #fecdd3; color: #e11d48; }
+        .btn-icon.danger { color: #ef4444; }
     </style>
 </head>
 <body>
     <div class="dashboard-container">
-        
         <aside class="sidebar">
             <div class="sidebar-header"><img src="/img/pic01.png" alt="Logo OI" class="sidebar-logo"></div>
             <nav class="sidebar-nav">
                 <a href="/panel" class="nav-item"><iconify-icon icon="lucide:layout-dashboard"></iconify-icon> <span>Dashboard</span></a>
                 <a href="/panel/ofertas" class="nav-item active"><iconify-icon icon="lucide:book-open"></iconify-icon> <span>Ofertas de Capacitación</span></a>
+                <a href="/panel/participantes" class="nav-item"><iconify-icon icon="lucide:users"></iconify-icon> <span>Participantes y Pagos</span></a>
+                <a href="/panel/empresas" class="nav-item"><iconify-icon icon="lucide:building-2"></iconify-icon> <span>Empresas B2B</span></a>                
             </nav>
             <div class="sidebar-footer">
                 <a href="/logout" class="nav-item logout-btn"><iconify-icon icon="lucide:log-out"></iconify-icon> <span>Cerrar Sesión</span></a>
@@ -34,9 +37,7 @@
         <main class="main-content">
             <header class="top-header">
                 <div class="header-title"><h1>Gestión de Ofertas</h1></div>
-                <div class="header-user">
-                    <span class="user-name">Hola, <%= admin.username %></span>
-                </div>
+                <div class="header-user"><span class="user-name">Hola, <%= admin.username %></span></div>
             </header>
 
             <div style="padding: 32px; display: flex; justify-content: space-between; align-items: center;">
@@ -66,7 +67,12 @@
                                         Inicio: <%= new Date(oferta.capoffecha_inicio).toLocaleDateString() %><br>
                                         Fin: <%= new Date(oferta.capoffecha_fin).toLocaleDateString() %>
                                     </td>
-                                    <td><%= oferta.capofcupos %></td>
+                                    <td>
+                                        <strong><%= oferta.inscritos || 0 %></strong> / <%= oferta.capofcupos %>
+                                        <% if(oferta.cupos_bloqueados === 1) { %>
+                                            <br><span class="badge danger" style="display: inline-block; margin-top: 4px;">CERRADO</span>
+                                        <% } %>
+                                    </td>
                                     <td>
                                         <% if(oferta.capofestatus === 1) { %>
                                             <span class="badge active">ACTIVA</span>
@@ -74,11 +80,14 @@
                                             <span class="badge inactive">INACTIVA</span>
                                         <% } %>
                                     </td>
-                                    <td>
-                                        <a href="/panel/ofertas/editar/<%= oferta.capofcodigo %>" class="btn-icon" style="text-decoration: none; width: 32px; height: 32px; display: inline-flex;" title="Editar">
-                                        <iconify-icon icon="lucide:edit"></iconify-icon>
+                                    <td style="display: flex; gap: 6px; align-items: center;">
+                                        <a href="/panel/ofertas/editar/<%= oferta.capofcodigo %>" class="btn-icon" style="text-decoration: none; width: 32px; height: 32px; display: inline-flex; justify-content: center; align-items: center;" title="Editar">
+                                            <iconify-icon icon="lucide:edit"></iconify-icon>
                                         </a>
-                                        <a href="/panel/ofertas/toggle/<%= oferta.capofcodigo %>" class="btn-icon <%= oferta.capofestatus === 1 ? 'danger' : '' %>" style="text-decoration: none; width: 32px; height: 32px;" title="<%= oferta.capofestatus === 1 ? 'Desactivar' : 'Activar' %>">
+                                        <a href="/panel/ofertas/toggle-cupos/<%= oferta.capofcodigo %>" class="btn-icon <%= oferta.cupos_bloqueados === 1 ? 'danger' : '' %>" style="text-decoration: none; width: 32px; height: 32px; display: inline-flex; justify-content: center; align-items: center;" title="<%= oferta.cupos_bloqueados === 1 ? 'Abrir Inscripciones' : 'Cerrar Inscripciones' %>">
+                                            <iconify-icon icon="<%= oferta.cupos_bloqueados === 1 ? 'lucide:lock' : 'lucide:unlock' %>"></iconify-icon>
+                                        </a>
+                                        <a href="/panel/ofertas/toggle/<%= oferta.capofcodigo %>" class="btn-icon <%= oferta.capofestatus === 1 ? 'danger' : '' %>" style="text-decoration: none; width: 32px; height: 32px; display: inline-flex; justify-content: center; align-items: center;" title="<%= oferta.capofestatus === 1 ? 'Desactivar' : 'Activar' %>">
                                             <iconify-icon icon="<%= oferta.capofestatus === 1 ? 'lucide:power-off' : 'lucide:power' %>"></iconify-icon>
                                         </a>
                                     </td>

@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><%= title %></title>
+    <link rel="icon" type="image/png" href="/img/favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="/css/adminpanel.css">
+</head>
+<body>
+    <div class="dashboard-container">
+        
+        <aside class="sidebar">
+            <div class="sidebar-header"><img src="/img/pic01.png" alt="Logo OI" class="sidebar-logo"></div>
+            <nav class="sidebar-nav">
+                <a href="/panel" class="nav-item"><iconify-icon icon="lucide:layout-dashboard"></iconify-icon> <span>Dashboard</span></a>
+                <a href="/panel/ofertas" class="nav-item"><iconify-icon icon="lucide:book-open"></iconify-icon> <span>Ofertas de Capacitación</span></a>
+                <a href="/panel/participantes" class="nav-item"><iconify-icon icon="lucide:users"></iconify-icon> <span>Participantes y Pagos</span></a>
+                <a href="/panel/empresas" class="nav-item active"><iconify-icon icon="lucide:building-2"></iconify-icon> <span>Empresas B2B</span></a>
+            </nav>
+            <div class="sidebar-footer">
+                <a href="/logout" class="nav-item logout-btn"><iconify-icon icon="lucide:log-out"></iconify-icon> <span>Cerrar Sesión</span></a>
+            </div>
+        </aside>
+
+        <main class="main-content">
+            <header class="top-header">
+                <div class="header-title"><h1>Gestión de Empresas (B2B)</h1></div>
+                <div class="header-user"><span class="user-name">Hola, <%= admin.username %></span></div>
+            </header>
+
+            <div class="p-8">
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6 mb-8">
+                    
+                    <% if (lotes && lotes.length > 0) { %>
+                    <div class="bg-white rounded-xl shadow-sm border border-orange-200 p-6 mb-8 relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-orange-500"></div>
+                        <h2 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                            <iconify-icon icon="lucide:alert-circle" class="text-orange-500"></iconify-icon> 
+                            Lotes Pendientes de Conciliación
+                        </h2>
+                        
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <% lotes.forEach((lote) => { %>
+                                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 flex justify-between items-center">
+                                    <div>
+                                        <p class="font-bold text-blue-700 text-sm"><%= lote.empresa_nombre %></p>
+                                        <p class="text-gray-900 font-medium"><%= lote.capnombre %></p>
+                                        <p class="text-gray-500 text-xs mt-1">
+                                            <span class="bg-orange-100 text-orange-800 px-2 py-0.5 rounded-full font-bold">
+                                                <%= lote.total_empleados %> Empleados en espera
+                                            </span>
+                                        </p>
+                                    </div>
+                                    <button type="button" 
+                                            data-empresa-id="<%= lote.id_contacto %>" 
+                                            data-oferta-id="<%= lote.capofcodigo %>" 
+                                            data-empresa-nombre="<%= lote.empresa_nombre %>" 
+                                            data-total="<%= lote.total_empleados %>"
+                                            onclick="aprobarLoteCompleto(this)" 
+                                            class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition flex items-center gap-2 shadow-sm">
+                                        <iconify-icon icon="lucide:check-circle-2"></iconify-icon> <span>Aprobar Lote</span>
+                                    </button>
+                                </div>
+                            <% }); %>
+                        </div>
+                    </div>
+                    <% } %>
+                    
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">Registrar Nuevo Contacto Corporativo</h2>
+                    <form action="/panel/empresas/nueva" method="POST">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Nombre de la Empresa</label>
+                                <input type="text" name="empresa_nombre" class="w-full border border-gray-300 rounded-lg px-3 py-2" placeholder="Ej. Coca-Cola, Polar..." required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Tipo Doc.</label>
+                                <select name="emp_tipodoc" class="w-full border border-gray-300 rounded-lg px-3 py-2" required>
+                                    <option value="Ced">Cédula</option>
+                                    <option value="Pas">Pasaporte</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Documento</label>
+                                <input type="text" name="emp_doc" class="w-full border border-gray-300 rounded-lg px-3 py-2" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Teléfono</label>
+                                <input type="text" name="emp_telefono" class="w-full border border-gray-300 rounded-lg px-3 py-2" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Nombre del Contacto</label>
+                                <input type="text" name="emp_nombre" class="w-full border border-gray-300 rounded-lg px-3 py-2" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Apellido del Contacto</label>
+                                <input type="text" name="emp_apellido" class="w-full border border-gray-300 rounded-lg px-3 py-2" required>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Correo Electrónico (Para OTP)</label>
+                                <input type="email" name="emp_email" class="w-full border border-gray-300 rounded-lg px-3 py-2" required>
+                            </div>
+                        </div>
+                        <div class="mt-4 flex justify-end">
+                            <button type="submit" class="px-6 py-2 bg-blue-600 text-white font-medium rounded-lg hover:bg-blue-700">Guardar Contacto</button>
+                        </div>
+                    </form>
+                </div>
+
+                <div class="bg-white rounded-xl shadow-sm border border-gray-100 p-6">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">Contactos Autorizados</h2>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse">
+                            <thead>
+                                <tr class="bg-gray-50 text-gray-600 text-sm border-b border-gray-200">
+                                    <th class="p-4 font-semibold">Documento</th>
+                                    <th class="p-4 font-semibold">Empresa / Representante</th>
+                                    <th class="p-4 font-semibold">Correo de Acceso</th>
+                                    <th class="p-4 font-semibold">Fecha Registro</th>
+                                </tr>
+                            </thead>
+                            <tbody class="text-sm text-gray-700 divide-y divide-gray-100">
+                                <% if (contactos && contactos.length > 0) { %>
+                                    <% contactos.forEach((contacto) => { %>
+                                        <tr class="hover:bg-gray-50 transition-colors">
+                                            <td class="p-4 font-mono"><%= contacto.emp_tipodoc %>-<%= contacto.emp_doc %></td>
+                                            <td class="p-4 font-medium">
+                                                <span class="text-blue-700 font-bold"><%= contacto.empresa_nombre %></span><br>
+                                                <%= contacto.emp_nombre %> <%= contacto.emp_apellido %>
+                                            </td>
+                                            <td class="p-4"><%= contacto.emp_email %></td>
+                                            <td class="p-4"><%= new Date(contacto.creado_en).toLocaleDateString('es-VE') %></td>
+                                        </tr>
+                                    <% }); %>
+                                <% } else { %>
+                                    <tr><td colspan="4" class="p-8 text-center text-gray-500">No hay empresas registradas aún.</td></tr>
+                                <% } %>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        async function aprobarLoteCompleto(btnElement) {
+            // Extraemos los datos de forma segura desde los atributos del botón
+            const empresaId = btnElement.getAttribute('data-empresa-id');
+            const ofertaId = btnElement.getAttribute('data-oferta-id');
+            const empresaNombre = btnElement.getAttribute('data-empresa-nombre');
+            const total = btnElement.getAttribute('data-total');
+
+            if (!confirm(`¿Estás seguro de APROBAR y conciliar el lote de ${total} empleados de la empresa ${empresaNombre}?\n\nEsto les enviará un correo de bienvenida a cada uno.`)) return;
+
+            // Guardamos el contenido original y mostramos estado de carga
+            const originalHTML = btnElement.innerHTML;
+            btnElement.innerHTML = '<iconify-icon icon="lucide:loader-2" class="animate-spin"></iconify-icon> <span>Procesando...</span>';
+            btnElement.disabled = true;
+
+            try {
+                const response = await fetch('/panel/empresas/aprobar-lote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ empresa_id: empresaId, oferta_id: ofertaId })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(data.message);
+                    window.location.reload(); // Recarga para desaparecer el lote de la lista
+                } else {
+                    alert("Error: " + data.message);
+                    btnElement.innerHTML = originalHTML;
+                    btnElement.disabled = false;
+                }
+            } catch (error) {
+                alert("Error de red conectando con el servidor.");
+                btnElement.innerHTML = originalHTML;
+                btnElement.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>

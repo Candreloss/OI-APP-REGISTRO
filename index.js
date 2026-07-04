@@ -1,18 +1,22 @@
 // Archivo: index.js (En la raíz del proyecto)
 
-// 1. Importamos la app desde su NUEVA ubicación
+// 1. Cargar variables de entorno
+require('dotenv').config();
+
+// 2. Importamos la app
 const app = require('./src/app'); 
 
-// 2. Importamos las rutas (Usando app.use es más limpio)
-app.use('/', require('./src/routes/principal'));
+// 3. Importamos las nuevas rutas limpias
+app.use('/', require('./src/routes/publico'));
+app.use('/', require('./src/routes/admin'));
 
-// 3. Iniciamos el servidor
+// 4. Iniciamos el servidor
 const port = app.get('port');
 app.listen(port, () => {
     console.log(`
     ================================================
-    SERVIDOR CORRIENDO EN PUERTO: ${port}
-    Configuración cargada desde: src/app.js
+    🚀 SERVIDOR CORRIENDO EN PUERTO: ${port}
+    🌍 ENTORNO: ${process.env.NODE_ENV || 'development'}
     ================================================
     `);
 });

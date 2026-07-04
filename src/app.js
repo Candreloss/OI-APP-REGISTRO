@@ -16,13 +16,16 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(express.urlencoded({ extended: false }));
 app.use(express.json());
 
+// OBLIGATORIO PARA PRODUCCIÓN EN CPANEL: Confiar en el proxy para cookies seguras
+app.set('trust proxy', 1);
+
 // 2. CONFIGURAMOS LA CAJA FUERTE (NUEVO)
 app.use(session({
-    secret: 'mi_secreto_super_seguro_123', // Llave secreta para encriptar cookies
+    secret: process.env.SESSION_SECRET, // Llamamos al secreto desde el .env
     resave: false,
     saveUninitialized: false,
     cookie: { 
-        secure: false, // false porque estamos en localhost (sin https)
+        secure: process.env.NODE_ENV === 'production', // true en cPanel, false en localhost
         maxAge: 1000 * 60 * 60 * 2 // Expira en 2 horas
     }
 }));
