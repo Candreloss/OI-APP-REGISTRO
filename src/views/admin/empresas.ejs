@@ -55,15 +55,23 @@
                                             </span>
                                         </p>
                                     </div>
-                                    <button type="button" 
-                                            data-empresa-id="<%= lote.id_contacto %>" 
-                                            data-oferta-id="<%= lote.capofcodigo %>" 
-                                            data-empresa-nombre="<%= lote.empresa_nombre %>" 
-                                            data-total="<%= lote.total_empleados %>"
-                                            onclick="aprobarLoteCompleto(this)" 
-                                            class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition flex items-center gap-2 shadow-sm">
-                                        <iconify-icon icon="lucide:check-circle-2"></iconify-icon> <span>Aprobar Lote</span>
-                                    </button>
+                                    <div style="display: flex; gap: 8px; align-items: center;">
+                                        <button type="button" 
+                                                data-empresa-id="<%= lote.id_contacto %>" 
+                                                data-oferta-id="<%= lote.capofcodigo %>" 
+                                                data-empresa-nombre="<%= lote.empresa_nombre %>" 
+                                                data-total="<%= lote.total_empleados %>"
+                                                onclick="aprobarLoteCompleto(this)" 
+                                                class="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition flex items-center gap-2 shadow-sm">
+                                            <iconify-icon icon="lucide:check-circle-2"></iconify-icon> <span>Aprobar Lote</span>
+                                        </button>
+
+                                        <button type="button" 
+                                                onclick="rechazarLote('<%= lote.id_contacto %>', '<%= lote.capofcodigo %>', '<%= lote.empresa_nombre %>', '<%= lote.total_empleados %>')" 
+                                                class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition flex items-center gap-2 shadow-sm" title="Rechazar Pago">
+                                            <iconify-icon icon="lucide:x-circle"></iconify-icon> <span>Rechazar Pago</span>
+                                        </button>
+                                    </div>
                                 </div>
                             <% }); %>
                         </div>
@@ -185,6 +193,40 @@
                 btnElement.disabled = false;
             }
         }
+
+        async function rechazarLote(empresaId, ofertaId, empresaNombre, total) {
+            if (!confirm(`⚠️ ATENCIÓN: Estás a punto de RECHAZAR el pago del lote de ${total} empleados de la empresa ${empresaNombre}.\n\nSe eliminará el comprobante actual y la empresa tendrá que subir uno nuevo.\n\n¿Deseas continuar?`)) return;
+
+            // Buscamos el botón que fue clickeado para ponerlo en estado de carga
+            const btnElement = event.currentTarget;
+            const originalHTML = btnElement.innerHTML;
+            btnElement.innerHTML = '<iconify-icon icon="lucide:loader-2" class="animate-spin"></iconify-icon>';
+            btnElement.disabled = true;
+
+            try {
+                const response = await fetch('/panel/empresas/rechazar-lote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ empresa_id: empresaId, oferta_id: ofertaId })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    alert(data.message);
+                    window.location.reload(); 
+                } else {
+                    alert("Error: " + data.message);
+                    btnElement.innerHTML = originalHTML;
+                    btnElement.disabled = false;
+                }
+            } catch (error) {
+                alert("Error de red conectando con el servidor.");
+                btnElement.innerHTML = originalHTML;
+                btnElement.disabled = false;
+            }
+        }
+
     </script>
 </body>
 </html>

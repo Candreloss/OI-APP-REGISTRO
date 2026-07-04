@@ -138,7 +138,7 @@ AdminModel.obtenerLotesPendientes = () => {
             JOIN contacto_empresa ce ON i.ins_empresa_id = ce.id_contacto
             JOIN capacitacion_oferta co ON i.ins_oferta = co.capofcodigo
             JOIN capacitacion c ON co.capofcapcodigo = c.capcodigo
-            WHERE i.ins_estado != 'conciliado'
+            WHERE i.ins_estado = 'en_revision'
             GROUP BY ce.id_contacto, co.capofcodigo, ce.empresa_nombre, ce.emp_email, c.capnombre
         `;
         connection.query(query, (err, resultados) => {
@@ -289,6 +289,55 @@ AdminModel.eliminarInscripcionCompleta = (inscodigo) => {
                     });
                 });
             });
+        });
+    });
+};
+
+// 22. Rechazar el pago de un lote corporativo (B2B)
+AdminModel.rechazarPagoLote = (empresaId, ofertaId) => {
+    return new Promise((resolve, reject) => {
+        connection.getConnection((err, conn) => {
+            if (err) return reject(err);
+            conn.beginTransaction(errTrans => {
+                if (errTrans) { conn.release(); return reject(errTrans); }
+
+                // 1. Buscamos todas las inscripciones de este lote que están en revisión
+                const qSelect = `SELECT inscodigo FROM inscripcion WHERE ins_empresa_id = ? AND ins_oferta = ? AND ins_estado = 'en_revision'`;
+                conn.query(qSelect, [empresaId, ofertaId], (errSel, rows) => {
+                    if (errSel) return conn.rollback(() => { conn.release(); reject(errSel); });
+                    if (rows.length === 0) return conn.rollback(() => { conn.release(); reject(new Error('No hay inscripciones en revisión para este lote.')); });
+
+                    const inscodigos = rows.map(r => r.inscodigo);
+
+                    // 2. Eliminamos los reportes de pago asociados a esas inscripciones
+                    const qDeletePagos = `DELETE FROM pago_reportado WHERE pago_inscodigo IN (?)`;
+                    conn.query(qDeletePagos, [inscodigos], (errDel) => {
+                        if (errDel) return conn.rollback(() => { conn.release(); reject(errDel); });
+
+                        // 3. Devolvemos el estado a 'rechazado' para que la empresa sepa que debe subirlo de nuevo
+                        const qUpdateIns = `UPDATE inscripcion SET ins_estado = 'rechazado' WHERE inscodigo IN (?)`;
+                        conn.query(qUpdateIns, [inscodigos], (errUpd) => {
+                            if (errUpd) return conn.rollback(() => { conn.release(); reject(errUpd); });
+
+                            conn.commit(errCom => {
+                                if (errCom) return conn.rollback(() => { conn.release(); reject(errCom); });
+                                conn.release(); resolve(true);
+                            });
+                        });
+                    });
+                });
+            });
+        });
+    });
+};
+
+// 23. Obtener información de la empresa para notificaciones
+AdminModel.obtenerInfoEmpresa = (empresaId) => {
+    return new Promise((resolve, reject) => {
+        const query = `SELECT emp_email, empresa_nombre FROM contacto_empresa WHERE id_contacto = ?`;
+        connection.query(query, [empresaId], (err, rows) => {
+            if (err) reject(err);
+            else resolve(rows.length > 0 ? rows[0] : null);
         });
     });
 };

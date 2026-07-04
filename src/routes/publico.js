@@ -10,6 +10,7 @@ const adminController = require('../controllers/adminController');
 router.post('/api/solicitar-otp', publicoController.solicitarOTP);
 router.post('/api/validar-otp', publicoController.validarOTP);
 router.get('/api/cursos-pendientes/:cedula', publicoController.obtenerCursosPendientes);
+router.post('/registro', publicoController.registrarParticipante);
 
 // AQUÍ DEJAMOS ÚNICAMENTE LA RUTA CON MULTER:
 router.post('/api/reportar-pago', upload.single('comprobante'), publicoController.reportarPago);
@@ -22,6 +23,10 @@ router.get('/api/empresa/ofertas', publicoController.apiOfertasActivas);
 router.post('/api/empresa/registrar-lote', publicoController.registrarLoteEmpresa);
 
 router.post('/api/empresa/lote-existente', publicoController.obtenerLoteExistente);
+
+router.post('/api/empresa/lotes-pendientes', publicoController.obtenerLotesPendientesEmpresa);
+
+router.post('/api/empresa/reportar-pago', upload.single('comprobante'), publicoController.reportarPagoB2B);
 
 // --- RUTAS DE VISTAS PÚBLICAS ---
 router.get('/', publicoController.mostrarPrincipal);

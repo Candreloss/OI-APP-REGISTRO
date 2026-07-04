@@ -30,5 +30,6 @@ router.post('/panel/participantes/eliminar/:id', adminController.eliminarInscrip
 router.get('/panel/empresas', adminController.mostrarEmpresas);
 router.post('/panel/empresas/nueva', adminController.registrarContactoEmpresa);
 router.post('/panel/empresas/aprobar-lote', adminController.aprobarLoteB2B);
+router.post('/panel/empresas/rechazar-lote', adminController.rechazarPagoLote);
 
 module.exports = router;
