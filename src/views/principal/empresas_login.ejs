@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title><%= title %></title>
+    <link rel="icon" type="image/png" href="/img/favicon.ico">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
+    
+    <link rel="stylesheet" href="/css/stylesprincipal.css" />
+</head>
+<body>
+    <div class="export-wrapper">
+        <nav class="top-bar">
+            <div class="top-bar-left">
+                <div class="logo-wrapper">
+                    <img src="/img/pic01.png" alt="Logo Organización Inteligente" class="nav-logo">
+                </div>
+            </div>
+            <div style="width: 100%"></div>
+            <div class="top-bar-right">
+                <a href="/" style="font-size: 0.9rem; font-weight: 500; color: var(--brand-blue); text-decoration: none;">← Volver al portal público</a>
+            </div>
+        </nav>
+
+        <div class="main-container" id="app-container" style="max-width: 98% !important;">
+            <!-- PASO 1: SOLICITAR ACCESO -->
+            <section class="form-card" id="step-1-empresa">
+                <div class="form-header">
+                    <h2 style="color: #10b981;">Portal Empresas B2B</h2>
+                    <p class="form-subtitle">Exclusivo para representantes de RRHH registrados.</p>
+                </div>
+                <div class="form-grid" style="display: flex; flex-direction: column; gap: 1.25rem;">
+                    <div class="form-group">
+                        <label class="label">Documento Autorizado</label>
+                        <input type="text" id="emp-doc" class="input" placeholder="Tu número de documento" required />
+                    </div>
+                    <div class="form-group">
+                        <label class="label">Correo Electrónico Autorizado</label>
+                        <input type="email" id="emp-email" class="input" placeholder="ejemplo@empresa.com" required />
+                    </div>
+                    <button type="button" class="btn-primary" id="btn-solicitar-emp" onclick="solicitarOTPCorporativo()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); box-shadow: 0 4px 14px 0 rgba(16, 185, 129, 0.39);">
+                        Solicitar Acceso Seguro
+                    </button>
+                </div>
+            </section>
+
+            <!-- PASO 2: VERIFICAR OTP -->
+            <section class="form-card" id="step-2-otp-emp" style="display: none;">
+                <div class="form-header">
+                    <h2 style="color: #10b981;">Seguridad Corporativa</h2>
+                    <p class="form-subtitle" id="otp-subtitle-emp">Hemos enviado un código a tu correo.</p>
+                </div>
+                <div class="form-grid" style="display: flex; flex-direction: column; gap: 1.25rem; align-items: center;">
+                    <div class="form-group" style="width: 100%; text-align: center;">
+                        <label class="label">Ingresa el código de 6 dígitos</label>
+                        <input type="text" id="emp-codigo" class="input" maxlength="6" style="text-align: center; font-size: 1.5rem; letter-spacing: 0.5rem; font-weight: bold; height: 60px;" required />
+                    </div>
+                    <button type="button" class="btn-primary" id="btn-validar-emp" onclick="validarOTPCorporativo()" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                        Verificar Identidad
+                    </button>
+                    <a href="#" onclick="window.location.reload()" style="font-size: 0.85rem; color: #10b981; text-decoration: none; margin-top: 10px;">← Cancelar</a>
+                </div>
+            </section>
+
+            <section class="form-card" id="step-3-matriz" style="display: none; max-width: 1300px; width: 100%;">
+                <div class="form-header" style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border); padding-bottom: 1rem; margin-bottom: 1.5rem;">
+                    <div>
+                        <h2 style="color: #10b981; font-size: 1.5rem;">Matriz de Inscripción</h2>
+                        <p class="form-subtitle" id="nombre-empresa-auth">Empresa Autorizada</p>
+                    </div>
+                    <div style="background: #f8fafc; padding: 10px; border-radius: 8px; border: 1px solid #e2e8f0;">
+                        <label style="font-size: 0.8rem; font-weight: bold; color: #475569; display: block; margin-bottom: 4px;">Capacitación a Inscribir (Aplica para todo el lote)</label>
+                        <select id="select-capacitacion-lote" class="input" onchange="cargarLoteExistente()" style="min-width: 250px; padding: 5px; height: auto;" required></select>
+                    </div>
+                </div>
+
+                <div style="overflow-x: auto; border: 1px solid var(--border); border-radius: var(--radius); margin-bottom: 1.5rem;">
+                    <table style="width: 100%; border-collapse: collapse; min-width: 100%; text-align: left; font-size: 0.85rem;">
+                        <thead style="background: #f1f5f9; color: #475569;">
+                            <tr>
+                                <th style="padding: 6px 4px; font-size: 0.75rem;">Doc</th>
+                                <th style="padding: 6px 4px; font-size: 0.75rem;">Cédula/ID</th>
+                                <th style="padding: 6px 4px; font-size: 0.75rem;">Nombre</th>
+                                <th style="padding: 6px 4px; font-size: 0.75rem;">Apellido</th>
+                                <th style="padding: 6px 4px; font-size: 0.75rem;">Teléfono</th>
+                                <th style="padding: 6px 4px; font-size: 0.75rem;">Correo</th>
+                                <th style="padding: 6px 4px; font-size: 0.75rem;">Nacimiento</th>
+                                <th style="padding: 6px 4px; font-size: 0.75rem;">País / Ciudad</th>
+                                <th style="padding: 6px 4px; font-size: 0.75rem; text-align: center;">Borrar</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabla-empleados">
+                            </tbody>
+                    </table>
+                </div>
+
+                <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <button type="button" class="btn-secondary" onclick="agregarFilaMatriz()" style="background: transparent; color: #10b981; border: 1px dashed #10b981;">
+                        + Agregar Nuevo Empleado
+                    </button>
+                    
+                    <button type="button" class="btn-primary" id="btn-enviar-lote" onclick="enviarLoteEmpresa()" style="background: #10b981; width: auto; padding: 0 30px;">
+                        Guardar Lote Completo
+                    </button>
+                </div>
+            </section>
+        </div>
+    </div>
+
+    <script>
+        let correoEmpresa = '';
+        let cedulaEmpresa = ''; // Necesitamos esto para validar la transacción final
+
+        async function solicitarOTPCorporativo() {
+            const cedula = document.getElementById('emp-doc').value.trim();
+            const email = document.getElementById('emp-email').value.trim();
+
+            if(!cedula || !email) return alert("Llena ambos campos.");
+
+            const btn = document.getElementById('btn-solicitar-emp');
+            btn.innerText = "Enviando..."; btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/empresa/solicitar-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cedula, email })
+                });
+                const data = await response.json();
+
+                if(data.success) {
+                    correoEmpresa = email;
+                    cedulaEmpresa = cedula; // Guardamos para la transacción final
+                    document.getElementById('otp-subtitle-emp').innerText = `Enviado a ${email}`;
+                    document.getElementById('step-1-empresa').style.display = 'none';
+                    document.getElementById('step-2-otp-emp').style.display = 'block';
+                } else {
+                    alert(data.message);
+                }
+            } catch (error) {
+                alert("Error de red.");
+            } finally {
+                btn.innerText = "Solicitar Acceso Seguro"; btn.disabled = false;
+            }
+        }
+
+        async function validarOTPCorporativo() {
+            const codigo = document.getElementById('emp-codigo').value.trim();
+            if(codigo.length !== 6) return alert("Código inválido.");
+
+            const btn = document.getElementById('btn-validar-emp');
+            btn.innerText = "Verificando..."; btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/validar-otp', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: correoEmpresa, codigo })
+                });
+                const data = await response.json();
+
+                if(data.success) {
+                    // Ocultamos OTP y mostramos la Matriz
+                    document.getElementById('step-2-otp-emp').style.display = 'none';
+                    document.getElementById('step-3-matriz').style.display = 'block';
+                    document.getElementById('nombre-empresa-auth').innerText = `Gestión autorizada para: ${correoEmpresa}`;
+                    
+                    // Cargamos los cursos y una fila vacía para empezar
+                    cargarOfertasB2B();
+                    agregarFilaMatriz();
+                } else {
+                    alert(data.message);
+                }
+            } catch (error) {
+                alert("Error de red.");
+            } finally {
+                btn.innerText = "Verificar Identidad"; btn.disabled = false;
+            }
+        }
+
+        // --- FUNCIONES DEL FORMULARIO MATRIZ --- //
+
+        async function cargarOfertasB2B() {
+            const select = document.getElementById('select-capacitacion-lote');
+            try {
+                const res = await fetch('/api/empresa/ofertas');
+                const ofertas = await res.json();
+                
+                if(ofertas.length > 0) {
+                    select.innerHTML = '<option value="" disabled selected>Selecciona la capacitación</option>';
+                    ofertas.forEach(o => {
+                        const agotado = o.cupos_restantes <= 0;
+                        const bloqueado = o.cupos_bloqueados === 1;
+                        let textoExtra = "";
+                        
+                        if(bloqueado) textoExtra = " - [CERRADO TEMPORALMENTE]";
+                        else if(agotado) textoExtra = " - [CUPO AGOTADO]";
+                        
+                        select.innerHTML += `<option value="${o.capofcodigo}" ${agotado || bloqueado ? 'disabled' : ''}>
+                            ${o.capnombre} (Disponibles: ${Math.max(0, o.cupos_restantes)})${textoExtra}
+                        </option>`;
+                    });
+                } else {
+                    select.innerHTML = '<option value="" disabled selected>No hay ofertas activas</option>';
+                }
+            } catch (e) {
+                select.innerHTML = '<option value="" disabled selected>Error cargando datos</option>';
+            }
+        }
+
+        async function enviarLoteEmpresa() {
+            const capacitacionId = document.getElementById('select-capacitacion-lote').value;
+            if (!capacitacionId) return alert("DEBES SELECCIONAR LA CAPACITACIÓN EN LA PARTE SUPERIOR.");
+
+            const filas = document.querySelectorAll('.matriz-row');
+            if (filas.length === 0) return alert("Debes agregar al menos un empleado.");
+
+            const loteData = [];
+            let hayErrores = false;
+
+            // Extraemos y validamos los datos de cada fila
+            filas.forEach((fila, index) => {
+                const doc = fila.querySelector('.m-doc').value.trim();
+                const nombre = fila.querySelector('.m-nombre').value.trim();
+                const email = fila.querySelector('.m-email').value.trim();
+                const fecha = fila.querySelector('.m-fechanac').value;
+                
+                // NUEVO: Capturamos el código de país y el número limpio
+                const codpais = fila.querySelector('.m-codpais').value;
+                const numeroTel = fila.querySelector('.m-telefono').value.trim();
+
+                if(!doc || !nombre || !email || !fecha || !numeroTel) {
+                    fila.style.backgroundColor = '#fecdd3'; 
+                    hayErrores = true;
+                } else {
+                    fila.style.backgroundColor = 'transparent';
+                    loteData.push({
+                        tipodoc: fila.querySelector('.m-tipodoc').value,
+                        doc: doc,
+                        nombre: nombre,
+                        apellido: fila.querySelector('.m-apellido').value.trim(),
+                        // Concatenamos el código con el número para el backend
+                        telefono: codpais + ' ' + numeroTel, 
+                        email: email,
+                        fechanac: fecha,
+                        pais: fila.querySelector('.m-pais').value,
+                        ciudad: fila.querySelector('.m-ciudad').value.trim()
+                    });
+                }
+            });
+
+            if (hayErrores) return alert("Por favor, corrige los campos vacíos marcados en rojo antes de enviar.");
+
+            if(!confirm(`¿Estás seguro de registrar a estos ${loteData.length} empleados de un solo golpe?`)) return;
+
+            const btn = document.getElementById('btn-enviar-lote');
+            btn.innerText = "Procesando Lote..."; btn.disabled = true;
+
+            try {
+                const response = await fetch('/api/empresa/registrar-lote', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        cedula_empresa: cedulaEmpresa, 
+                        email_empresa: correoEmpresa, 
+                        capacitacion: capacitacionId, 
+                        empleados: loteData 
+                    })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    alert(data.message);
+                    window.location.reload(); // Recargamos para dejar todo en cero
+                } else {
+                    alert(data.message);
+                }
+            } catch (error) {
+                alert("Error de red conectando con el servidor.");
+            } finally {
+                btn.innerText = "Guardar Lote Completo"; btn.disabled = false;
+            }
+        }
+
+        async function cargarLoteExistente() {
+            const capacitacionId = document.getElementById('select-capacitacion-lote').value;
+            const tbody = document.getElementById('tabla-empleados');
+            
+            // Limpiamos la tabla y mostramos que estamos cargando
+            tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:10px;">Buscando registros previos...</td></tr>';
+
+            try {
+                const response = await fetch('/api/empresa/lote-existente', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ cedula_empresa: cedulaEmpresa, email_empresa: correoEmpresa, capacitacion: capacitacionId })
+                });
+                const empleadosExistentes = await response.json();
+                
+                tbody.innerHTML = ''; // Limpiamos el mensaje
+
+                if (empleadosExistentes.length > 0) {
+                    empleadosExistentes.forEach(emp => {
+                        // Formateamos la fecha de SQL (ISO) a formato YYYY-MM-DD para el input type="date"
+                        const fechaFormateada = new Date(emp.perfechanac).toISOString().split('T')[0];
+                        agregarFilaMatriz(emp.pertipodoc, emp.perdoc, emp.pernombre, emp.perapellido, emp.pertelefono, emp.peremail, fechaFormateada, emp.perpais, emp.perciudad, true);
+                    });
+                } else {
+                    // Si no hay nadie, agregamos una fila vacía para empezar
+                    agregarFilaMatriz();
+                }
+            } catch (e) {
+                tbody.innerHTML = ''; agregarFilaMatriz();
+            }
+        }
+
+        // Modificamos agregarFilaMatriz para incluir el desplegable de código de país
+        function agregarFilaMatriz(tipodoc='', doc='', nombre='', apellido='', tel='', email='', fecha='', pais='', ciudad='', esExistente=false) {
+            const tbody = document.getElementById('tabla-empleados');
+            const tr = document.createElement('tr');
+            tr.className = "matriz-row";
+            
+            // Si el empleado ya existe, bloqueamos la cédula
+            const readonlyDoc = esExistente ? 'readonly style="background-color: #f1f5f9; cursor: not-allowed;" title="No puedes editar la cédula de alguien ya registrado"' : '';
+
+            tr.innerHTML = `
+                <td style="padding: 4px;"><select class="m-tipodoc input" style="padding: 5px; height: 35px; width: 55px; font-size: 0.8rem;"><option value="Ced" ${tipodoc==='Ced'?'selected':''}>V/E</option><option value="Pas" ${tipodoc==='Pas'?'selected':''}>Pas</option></select></td>
+                
+                <td style="padding: 4px;"><input type="text" class="m-doc input" value="${doc}" ${readonlyDoc} placeholder="Cédula" style="padding: 5px; height: 35px; width: 100%; min-width: 80px; font-size: 0.8rem;" required></td>
+                
+                <td style="padding: 4px;"><input type="text" class="m-nombre input" value="${nombre}" placeholder="Nombre" style="padding: 5px; height: 35px; width: 100%; min-width: 80px; font-size: 0.8rem;" required></td>
+                
+                <td style="padding: 4px;"><input type="text" class="m-apellido input" value="${apellido}" placeholder="Apellido" style="padding: 5px; height: 35px; width: 100%; min-width: 80px; font-size: 0.8rem;" required></td>
+                
+                <td style="padding: 4px; display: flex; gap: 2px;">
+                    <select class="m-codpais input" style="padding: 5px; height: 35px; width: 65px; font-size: 0.8rem; flex-shrink: 0;" required>
+                        <option value="+58">+58</option><option value="+57">+57</option><option value="+54">+54</option>
+                        <option value="+56">+56</option><option value="+51">+51</option><option value="+593">+593</option>
+                        <option value="+52">+52</option><option value="+55">+55</option><option value="+598">+598</option>
+                        <option value="+595">+595</option><option value="+591">+591</option><option value="+1">+1</option><option value="+34">+34</option>
+                    </select>
+                    <input type="tel" class="m-telefono input" value="${tel}" placeholder="Teléfono" oninput="this.value = this.value.replace(/^0+/, '')" style="padding: 5px; height: 35px; width: 100%; min-width: 85px; font-size: 0.8rem;" required>
+                </td>
+
+                <td style="padding: 4px;"><input type="email" class="m-email input" value="${email}" placeholder="Correo" style="padding: 5px; height: 35px; width: 100%; min-width: 110px; font-size: 0.8rem;" required></td>
+                
+                <td style="padding: 4px;"><input type="date" class="m-fechanac input" value="${fecha}" style="padding: 5px; height: 35px; width: 100%; min-width: 105px; font-size: 0.8rem;" required></td>
+                
+                <td style="padding: 4px; display: flex; gap: 2px;">
+                    <select class="m-pais input" style="padding: 5px; height: 35px; width: 55px; font-size: 0.8rem;"><option value="VE" ${pais==='VE'?'selected':''}>VE</option><option value="OT" ${pais==='OT'?'selected':''}>Otro</option></select>
+                    <input type="text" class="m-ciudad input" value="${ciudad}" placeholder="Ciudad" style="padding: 5px; height: 35px; width: 100%; min-width: 70px; font-size: 0.8rem;" required>
+                </td>
+                
+                <td style="padding: 4px; text-align: center;">
+                    <button type="button" onclick="this.closest('tr').remove()" style="color: #ef4444; background: none; border: none; cursor: pointer; font-size: 1.2rem; margin-top: 5px;">
+                        <iconify-icon icon="lucide:trash-2"></iconify-icon>
+                    </button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        }
+    </script>
+</body>
+</html>

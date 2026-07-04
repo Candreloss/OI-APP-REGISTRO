@@ -40,6 +40,9 @@
               Login
             </button>
           </form>
+          <a href="/empresas" style="font-size: 0.85rem; font-weight: 600; color: #10b981; text-decoration: none; margin-right: 15px;">
+              Módulo Empresas
+          </a>
         </div>
       </nav>
 
@@ -110,7 +113,7 @@
             <p class="form-subtitle">Ingresa los datos exactos de la cuenta bancaria desde donde se realizó el pago.</p>
           </div>
 
-          <form action="/api/reportar-pago" method="POST" id="form-pago" style="margin-top: 1.5rem;">
+          <form onsubmit="procesarReportePago(event)" id="form-pago" enctype="multipart/form-data" style="margin-top: 1.5rem;">
             <input type="hidden" name="doc_pago" id="hidden-doc-pago" />
 
             <div class="form-group" style="margin-bottom: 1.5rem;">
@@ -148,6 +151,15 @@
               <div class="form-group full-width">
                 <label class="label">Teléfono asociado al pago (Pago Móvil / Zelle)</label>
                 <input name="titular_telefono" type="text" class="input" placeholder="Ej. 04141234567" required />
+              </div>
+
+              <div class="form-group full-width" style="margin-top: 1rem; border: 2px dashed var(--border); padding: 1.5rem; border-radius: var(--radius); text-align: center; background-color: var(--background);">
+                <label class="label" style="margin-bottom: 10px; color: var(--brand-blue); font-weight: 600;">
+                    <iconify-icon icon="lucide:image" style="font-size: 24px; vertical-align: middle; margin-right: 8px;"></iconify-icon>
+                    Adjuntar Capture de Pago (Obligatorio)
+                </label>
+                <p style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 1rem;">Formatos aceptados: JPG, JPEG, PNG. Tamaño máximo: 5MB.</p>
+                <input type="file" name="comprobante" class="input" accept="image/png, image/jpeg, image/jpg" style="padding: 6px; height: auto; cursor: pointer;" required />
               </div>
             </div>
 
@@ -195,7 +207,7 @@
             <p class="form-subtitle">Como es tu primera vez, necesitamos tus datos básicos para emitir tus certificados.</p>
           </div>
           
-          <form action="/registro" method="POST" style="margin-top: 1.5rem;">
+          <form onsubmit="procesarRegistroCompleto(event)" id="form-registro" style="margin-top: 1.5rem;">
             <input type="hidden" name="doc" id="hidden-doc" />
             <input type="hidden" name="email" id="hidden-email" />
 
@@ -223,39 +235,37 @@
               </div>
 
               <div class="form-group">
-                <label class="label">Código de país</label>
-                <input name="codpais" type="text" class="input" placeholder="Ej. +58" maxlength="5" pattern="^\+\d{1,4}$" required />
-              </div>
-            
-              <div class="form-group">
-                  <label class="label">Número de teléfono</label>
-                  <input name="telefono" type="tel" class="input" placeholder="Ej. 4123456789" minlength="7" maxlength="15" pattern="^\d{7,15}$" required />
+                  <label class="label">Código de país</label>
+                  <div class="select-wrapper">
+                      <select name="codpais" class="input" required>
+                          <option value="" disabled selected>Selecciona</option>
+                          <option value="+58">+58 (VE)</option>
+                          <option value="+57">+57 (CO)</option>
+                          <option value="+54">+54 (AR)</option>
+                          <option value="+56">+56 (CL)</option>
+                          <option value="+51">+51 (PE)</option>
+                          <option value="+593">+593 (EC)</option>
+                          <option value="+52">+52 (MX)</option>
+                          <option value="+55">+55 (BR)</option>
+                          <option value="+598">+598 (UY)</option>
+                          <option value="+595">+595 (PY)</option>
+                          <option value="+591">+591 (BO)</option>
+                          <option value="+1">+1 (US/CA)</option>
+                          <option value="+34">+34 (ES)</option>
+                      </select>
+                  </div>
               </div>
 
-              <div class="form-group full-width"> 
-                <label class="label">Fecha de Nacimiento</label>
-                <div class="date-row">
-                  <div class="date-col year-col">
-                    <input name="año" type="number" class="input" placeholder="Año" min="1900" max="2030" required />
-                    <span class="sub-label">Año</span>
-                  </div>
-                  <div class="date-col month-col">
-                    <div class="select-wrapper">
-                      <select name="mes" class="input" required style="appearance: none; cursor: pointer">
-                          <option value="" disabled selected>Mes</option>
-                          <option value="01">Ene</option><option value="02">Feb</option><option value="03">Mar</option>
-                          <option value="04">Abr</option><option value="05">May</option><option value="06">Jun</option>
-                          <option value="07">Jul</option><option value="08">Ago</option><option value="09">Sep</option>
-                          <option value="10">Oct</option><option value="11">Nov</option><option value="12">Dic</option>
-                      </select>
-                    </div>
-                    <span class="sub-label">Mes</span>
-                  </div>
-                  <div class="date-col day-col">
-                    <input name="dia" type="number" class="input" placeholder="Día" min="1" max="31" required />
-                    <span class="sub-label">Día</span>
-                  </div>
-                </div>
+              <div class="form-group">
+                  <label class="label">Número de teléfono</label>
+                  <input name="telefono" type="tel" class="input" placeholder="Ej. 4123456789" 
+                        minlength="7" maxlength="15" 
+                        oninput="this.value = this.value.replace(/^0+/, '')" required />
+              </div>
+
+              <div class="form-group" style="grid-column: span 2;">
+                  <label class="label">Fecha de Nacimiento</label>
+                  <input type="date" name="fechanac" class="input" required />
               </div>
 
               <div class="form-group">
@@ -287,11 +297,23 @@
               <div class="offers-grid">
                 <% if (ofertas && ofertas.length > 0) { %>
                     <% ofertas.forEach((oferta) => { %>
-                        <label class="offer-card">
-                            <input type="radio" name="capacitacion" value="<%= oferta.capofcodigo %>" required>
+                        <% 
+                            const agotado = oferta.cupos_restantes <= 0; 
+                            const bloqueado = oferta.cupos_bloqueados === 1;
+                            const isDisabled = agotado || bloqueado ? 'disabled' : '';
+                        %>
+                        <label class="offer-card <%= isDisabled ? 'opacity-50 cursor-not-allowed bg-gray-50' : '' %>">
+                            <input type="radio" name="capacitacion" value="<%= oferta.capofcodigo %>" <%= isDisabled %> required>
                             <div class="offer-details">
-                                <span class="offer-title"><%= oferta.capnombre %></span>
-                                <span class="offer-code">Código: <%= oferta.capofcodigo %></span>
+                                <span class="offer-title">
+                                    <%= oferta.capnombre %>
+                                    <% if(bloqueado) { %> 
+                                        <span style="color: #ef4444; font-size: 0.8rem; font-weight: bold;">(CERRADO)</span> 
+                                    <% } else if(agotado) { %> 
+                                        <span style="color: #ef4444; font-size: 0.8rem; font-weight: bold;">(AGOTADO)</span> 
+                                    <% } %>
+                                </span>
+                                <span class="offer-code">Cupos Disponibles: <%= Math.max(0, oferta.cupos_restantes) %></span>
                             </div>
                         </label>
                     <% }); %>
@@ -449,12 +471,18 @@
 
       async function procesarInscripcionRapida(event) {
           event.preventDefault(); 
+          const form = event.target; // Capturamos el formulario
+          const btn = form.querySelector('button[type="submit"]'); // Capturamos el botón
           const capacitacion = document.getElementById('select-nuevas-ofertas').value;
           
           if(!capacitacion) {
               alert("Por favor selecciona una capacitación.");
               return;
           }
+
+          // EL CANDADO: Bloqueamos el botón para evitar dobles clics
+          btn.innerText = "Procesando...";
+          btn.disabled = true;
 
           try {
               const response = await fetch('/api/inscripcion-rapida', {
@@ -473,6 +501,10 @@
               }
           } catch (error) {
               alert("Error de conexión con el servidor.");
+          } finally {
+              // QUITAMOS EL CANDADO si falla o termina
+              btn.innerText = "Inscribirme Ahora";
+              btn.disabled = false;
           }
       }
 
@@ -504,6 +536,71 @@
       function volverPanelExistente() {
           step3Pago.style.display = 'none';
           step3Existente.style.display = 'block';
+      }
+
+      // --- NUEVAS FUNCIONES PARA PROCESAR LOS FORMULARIOS CON JSON Y FETCH ---
+      
+      async function procesarRegistroCompleto(event) {
+          event.preventDefault();
+          const form = document.getElementById('form-registro');
+          const formData = new FormData(form);
+          const data = Object.fromEntries(formData.entries());
+          const btn = form.querySelector('button[type="submit"]');
+
+          btn.innerText = "Procesando Inscripción...";
+          btn.disabled = true;
+
+          try {
+              const response = await fetch('/registro', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify(data)
+              });
+              const result = await response.json();
+
+              if (result.success) {
+                  alert(result.message);
+                  window.location.href = "/";
+              } else {
+                  alert("Error: " + result.message);
+              }
+          } catch (error) {
+              alert("Error conectando con el servidor.");
+          } finally {
+              btn.innerText = "Guardar Perfil e Inscribirme";
+              btn.disabled = false;
+          }
+      }
+
+      async function procesarReportePago(event) {
+          event.preventDefault();
+          const form = document.getElementById('form-pago');
+          const formData = new FormData(form);
+          const btn = form.querySelector('button[type="submit"]');
+
+          btn.innerText = "Subiendo Comprobante...";
+          btn.disabled = true;
+
+          try {
+              // A diferencia del registro, el pago envía un archivo, por lo que mandamos el FormData crudo sin JSON
+              const response = await fetch('/api/reportar-pago', {
+                  method: 'POST',
+                  body: formData
+              });
+              const result = await response.json();
+
+              if (result.success) {
+                  alert(result.message);
+                  window.location.href = "/";
+              } else {
+                  alert("Error: " + result.message);
+              }
+          } catch (error) {
+              alert("Error conectando con el servidor.");
+          } finally {
+              btn.innerText = "Enviar Reporte";
+              btn.disabled = false;
+          }
       }
     </script>
   </body>

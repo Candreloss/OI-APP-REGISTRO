@@ -3,71 +3,50 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title><%= title %></title>
+    <title>Nueva Oferta | Organización Inteligente</title>
     <link rel="icon" type="image/png" href="/img/favicon.ico">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
     <script src="https://code.iconify.design/iconify-icon/1.0.7/iconify-icon.min.js"></script>
     <link rel="stylesheet" href="/css/adminpanel.css">
-    
-    <!-- Un pequeño ajuste de estilo específico para este formulario -->
     <style>
         .form-container { background: var(--white); padding: 2rem; border-radius: var(--radius); border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); max-width: 600px;}
         .form-group { margin-bottom: 1.5rem; display: flex; flex-direction: column; gap: 0.5rem; }
         .form-label { font-weight: 500; font-size: 0.9rem; color: var(--text-main); }
         .form-input { height: 40px; padding: 0 1rem; border: 1px solid var(--border); border-radius: var(--radius); outline: none; font-size: 0.9rem; }
-        .form-input:focus { border-color: var(--brand-orange); }
-        .btn-submit { background: var(--brand-orange); color: white; border: none; padding: 12px; border-radius: var(--radius); font-weight: 600; cursor: pointer; transition: 0.2s; width: 100%;}
+        .form-input:focus { border-color: #ff5500; }
+        .btn-submit { background: #ff5500; color: white; border: none; padding: 0.75rem 1.5rem; border-radius: var(--radius); font-weight: 600; cursor: pointer; margin-top: 1rem; }
         .btn-submit:hover { opacity: 0.9; }
     </style>
 </head>
 <body>
     <div class="dashboard-container">
-        
-        <!-- SIDEBAR (Igual que en el panel principal) -->
         <aside class="sidebar">
-            <div class="sidebar-header">
-                <img src="/img/pic01.png" alt="Logo OI" class="sidebar-logo">
-            </div>
+            <div class="sidebar-header"><img src="/img/pic01.png" alt="Logo OI" class="sidebar-logo"></div>
             <nav class="sidebar-nav">
-                <a href="/panel" class="nav-item">
-                    <iconify-icon icon="lucide:layout-dashboard"></iconify-icon> <span>Dashboard</span>
-                </a>
-                <a href="/panel/nueva-oferta" class="nav-item active">
-                    <iconify-icon icon="lucide:plus-circle"></iconify-icon> <span>Nueva Oferta</span>
-                </a>
+                <a href="/panel" class="nav-item"><iconify-icon icon="lucide:layout-dashboard"></iconify-icon> <span>Dashboard</span></a>
+                <a href="/panel/ofertas" class="nav-item active"><iconify-icon icon="lucide:book-open"></iconify-icon> <span>Ofertas de Capacitación</span></a>
+                <a href="/panel/participantes" class="nav-item"><iconify-icon icon="lucide:users"></iconify-icon> <span>Participantes y Pagos</span></a>
+                <a href="/panel/empresas" class="nav-item"><iconify-icon icon="lucide:building-2"></iconify-icon> <span>Empresas B2B</span></a>
             </nav>
-            <div class="sidebar-footer">
-                <a href="/logout" class="nav-item logout-btn">
-                    <iconify-icon icon="lucide:log-out"></iconify-icon> <span>Cerrar Sesión</span>
-                </a>
-            </div>
+            <div class="sidebar-footer"><a href="/logout" class="nav-item logout-btn"><iconify-icon icon="lucide:log-out"></iconify-icon> <span>Cerrar Sesión</span></a></div>
         </aside>
 
-        <!-- CONTENIDO PRINCIPAL -->
         <main class="main-content">
             <header class="top-header">
-                <div class="header-title">
-                    <div style="display: flex; align-items: center; gap: 10px;">
-                        <a href="/panel" style="color: var(--text-muted);"><iconify-icon icon="lucide:arrow-left"></iconify-icon></a>
-                        <h1>Abrir Nueva Capacitación</h1>
-                    </div>
-                </div>
-                <div class="header-user">
-                    <iconify-icon icon="lucide:user-circle" class="user-icon"></iconify-icon>
-                    <span class="user-name">Hola, <%= admin.username %></span>
-                </div>
+                <div class="header-title"><h1>Nueva Oferta</h1></div>
+                <div class="header-user"><span class="user-name">Hola, <%= admin.username %></span></div>
             </header>
 
-            <section style="padding: 32px;">
+            <section style="padding: 2rem;">
+                <a href="/panel/ofertas" style="color: #455a9f; text-decoration: none; font-size: 0.9rem; margin-bottom: 1.5rem; display: inline-block;">← Volver a Ofertas</a>
+                
                 <div class="form-container">
-                    <form action="/panel/nueva-oferta" method="POST">
-                        
+                    <form onsubmit="guardarNuevaOferta(event)" id="form-nueva-oferta">
                         <div class="form-group">
-                            <label class="form-label">Capacitación a Ofertar</label>
+                            <label class="form-label">Capacitación Base</label>
                             <select name="capofcapcodigo" class="form-input" required>
-                                <option value="" disabled selected>-- Selecciona un curso del catálogo --</option>
-                                <!-- Ciclo que llena las opciones desde la Base de Datos -->
-                                <% if(capacitacionesBase) { %>
+                                <option value="" disabled selected>Seleccione una capacitación...</option>
+                                <% if (capacitacionesBase && capacitacionesBase.length > 0) { %>
                                     <% capacitacionesBase.forEach(cap => { %>
                                         <option value="<%= cap.capcodigo %>"><%= cap.capnombre %></option>
                                     <% }) %>
@@ -97,5 +76,39 @@
             </section>
         </main>
     </div>
+
+    <script>
+        async function guardarNuevaOferta(event) {
+            event.preventDefault();
+            const form = event.target;
+            const btn = form.querySelector('button[type="submit"]');
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+
+            btn.innerText = "Publicando...";
+            btn.disabled = true;
+
+            try {
+                const response = await fetch('/panel/nueva-oferta', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    alert(result.message);
+                    window.location.href = '/panel/ofertas'; 
+                } else {
+                    alert("Error: " + result.message);
+                }
+            } catch (error) {
+                alert("Error conectando con el servidor.");
+            } finally {
+                btn.innerText = "Publicar Oferta";
+                btn.disabled = false;
+            }
+        }
+    </script>
 </body>
 </html>

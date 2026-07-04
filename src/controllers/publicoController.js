@@ -1,327 +1,311 @@
 // src/controllers/publicoController.js
-const dbConnection = require('../config/database'); 
-const connection = dbConnection(); 
-
-// --- NUEVO: Importamos el motor de correos ---
+const crypto = require('crypto'); // NUEVO: Módulo de seguridad nativo
 const transporter = require('../utils/mailer');
+
+// IMPORTAMOS NUESTRO NUEVO MODELO PÚBLICO
+const PublicoModel = require('../models/PublicoModel');
 
 const controller = {};
 
 // 1. Mostrar la página y las ofertas
-controller.mostrarPrincipal = (req, res) => {
-    const query = `
-        SELECT co.capofcodigo, c.capnombre 
-        FROM capacitacion_oferta co 
-        JOIN capacitacion c ON co.capofcapcodigo = c.capcodigo 
-        WHERE co.capofestatus = 1
-    `;
-
-    connection.query(query, (err, resultados) => {
-        if (err) {
-            console.error('Error al cargar ofertas:', err);
-            return res.render('principal/principal', { title: 'Página Principal', ofertas: [] });
-        }
-        res.render('principal/principal', { title: 'Página Principal', ofertas: resultados });
-    });
+controller.mostrarPrincipal = async (req, res) => {
+    try {
+        const ofertas = await PublicoModel.obtenerOfertasActivas();
+        res.render('principal/principal', { title: 'Página Principal', ofertas });
+    } catch (error) {
+        console.error('Error al cargar ofertas:', error);
+        res.render('principal/principal', { title: 'Página Principal', ofertas: [] });
+    }
 };
 
-// 2. LÓGICA MAESTRA DE REGISTRO
-controller.registrarParticipante = (req, res) => {
-    const { tipodoc, doc, nombre, apellido, codpais, telefono, email, pais, ciudad, capacitacion, año, mes, dia } = req.body;
+// 2. LÓGICA MAESTRA DE REGISTRO (Modernizada con JSON)
+controller.registrarParticipante = async (req, res) => {
+    const { tipodoc, doc, nombre, apellido, codpais, telefono, email, pais, ciudad, capacitacion, fechanac } = req.body;
 
-    // --- PASO 1: VALIDACIONES BÁSICAS ---
-    if (!tipodoc || !doc || !nombre || !apellido || !codpais || !telefono || !email || !pais || !ciudad || !capacitacion) {
-        return res.status(400).send('<script>alert("Todos los datos son obligatorios."); window.history.back();</script>');
+    if (!tipodoc || !doc || !nombre || !apellido || !codpais || !telefono || !email || !pais || !ciudad || !capacitacion || !fechanac) {
+        return res.status(400).json({ success: false, message: 'Todos los datos son obligatorios.' });
     }
 
     if (tipodoc === 'Ced' && !/^\d{6,9}$/.test(doc)) {
-        return res.send('<script>alert("Para Cédula, el documento debe tener entre 6 y 9 números."); window.history.back();</script>');
+        return res.status(400).json({ success: false, message: 'Para Cédula, el documento debe tener entre 6 y 9 números.' });
     } else if (tipodoc !== 'Ced' && !/^[a-zA-Z0-9]{6,20}$/.test(doc)) {
-        return res.send('<script>alert("Documento inválido para Pasaporte/Otro."); window.history.back();</script>');
+        return res.status(400).json({ success: false, message: 'Documento inválido para Pasaporte/Otro.' });
     }
 
-    if (!/^\+\d{1,4}$/.test(codpais)) return res.send('<script>alert("Código de país inválido."); window.history.back();</script>');
-    if (!/^\d{7,15}$/.test(telefono)) return res.send('<script>alert("Teléfono inválido."); window.history.back();</script>');
+    if (!/^\+\d{1,4}$/.test(codpais)) return res.status(400).json({ success: false, message: 'Código de país inválido.' });
+    if (!/^\d{7,15}$/.test(telefono)) return res.status(400).json({ success: false, message: 'Teléfono inválido.' });
 
-    // --- PASO 2: BLINDAJE DE FECHAS (ANTI 31 DE FEBRERO) ---
-    if (!año || !mes || !dia) {
-        return res.send('<script>alert("La fecha de nacimiento está incompleta."); window.history.back();</script>');
-    }
-
-    const numAño = parseInt(año, 10);
-    const numMes = parseInt(mes, 10);
-    const numDia = parseInt(dia, 10);
-
-    if (numMes < 1 || numMes > 12 || numDia < 1 || numDia > 31 || numAño < 1900 || numAño > new Date().getFullYear()) {
-        return res.send('<script>alert("La fecha de nacimiento ingresada no es válida."); window.history.back();</script>');
-    }
-
-    const mesesCon30Dias = [4, 6, 9, 11];
-    if (mesesCon30Dias.includes(numMes) && numDia > 30) {
-        return res.send('<script>alert("El mes seleccionado solo tiene 30 días."); window.history.back();</script>');
-    }
-
-    if (numMes === 2) {
-        const esBisiesto = (numAño % 4 === 0 && (numAño % 100 !== 0 || numAño % 400 === 0));
-        if (esBisiesto && numDia > 29) {
-            return res.send('<script>alert("Febrero solo tiene 29 días en años bisiestos."); window.history.back();</script>');
-        } else if (!esBisiesto && numDia > 28) {
-            return res.send('<script>alert("Febrero solo tiene 28 días en años no bisiestos."); window.history.back();</script>');
-        }
-    }
-
-    // --- PASO 3: FORMATEAR DATOS ---
-    const diaFormateado = dia.toString().padStart(2, '0');
-    const mesFormateado = mes.toString().padStart(2, '0');
-    const fechaNacimiento = `${año}-${mesFormateado}-${diaFormateado}`;
-    
     const nombreF = nombre.charAt(0).toUpperCase() + nombre.slice(1).toLowerCase();
     const apellidoF = apellido.charAt(0).toUpperCase() + apellido.slice(1).toLowerCase();
-    const telefonoCompleto = `${codpais}-${telefono}`;
+    const telefonoCompleto = `${codpais} ${telefono}`;
+    const datosPersona = [tipodoc, doc, nombreF, apellidoF, fechanac, telefonoCompleto, email, pais, ciudad];
 
-    // --- PASO 4: FLUJO DE BASE DE DATOS ---
-    const queryPersona = `
-        INSERT IGNORE INTO persona 
-        (pertipodoc, perdoc, pernombre, perapellido, perfechanac, pertelefono, peremail, perpais, perciudad) 
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `;
-    
-    connection.query(queryPersona, [tipodoc, doc, nombreF, apellidoF, fechaNacimiento, telefonoCompleto, email, pais, ciudad], (errPersona) => {
-        if (errPersona) return res.status(500).send('<script>alert("Error interno guardando al usuario."); window.history.back();</script>');
-
-        const queryInscripcion = `INSERT INTO inscripcion (ins_perdoc, ins_oferta) VALUES (?, ?)`;
+    try {
+        await PublicoModel.registrarUsuarioEInscripcion(datosPersona, capacitacion);
+        const ipParticipante = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
+        console.log(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - NUEVO REGISTRO | Doc: ${doc} | Oferta: ${capacitacion} | IP: ${ipParticipante}`);
         
-        connection.query(queryInscripcion, [doc, capacitacion], (errInscripcion) => {
-            if (errInscripcion) {
-                if (errInscripcion.code === 'ER_DUP_ENTRY') {
-                    return res.send('<script>alert("¡Ya te encuentras registrado en esta capacitación!"); window.history.back();</script>');
-                }
-                return res.status(500).send('<script>alert("Error interno procesando la inscripción."); window.history.back();</script>');
-            }
-
-            const queryAcademico = `INSERT INTO persona_capacitacion (pcap_perdoc, pcap_oferta) VALUES (?, ?)`;
-            connection.query(queryAcademico, [doc, capacitacion], (errAcademico) => {
-                if (errAcademico) console.error('Error en Fase Académica:', errAcademico);
-                
-                // AUDITORÍA DE ÉXITO
-                const ipParticipante = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-                const timestamp = new Date().toLocaleString('es-VE'); // Hora local aproximada
-                console.log(`[AUDITORÍA] [${timestamp}] - NUEVO REGISTRO | Doc: ${doc} | Oferta: ${capacitacion} | IP: ${ipParticipante}`);
-                
-                res.send('<script>alert("¡Inscripción completada con éxito! Nos pondremos en contacto contigo."); window.location.href="/";</script>');
-            });
-        });
-    });
+        res.json({ success: true, message: '¡Inscripción completada con éxito! Nos pondremos en contacto contigo.' });
+    } catch (errorObj) {
+        if (errorObj.tipo === 'validacion') {
+            return res.status(400).json({ success: false, message: errorObj.message });
+        }
+        if (errorObj.tipo === 'inscripcion' && errorObj.error && errorObj.error.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ success: false, message: '¡Ya te encuentras registrado en esta capacitación!' });
+        }
+        console.error("Error en registro:", errorObj);
+        res.status(500).json({ success: false, message: 'Error interno procesando la inscripción.' });
+    }
 };
 
-// --- NUEVA FUNCIÓN: Solicitar Código OTP ---
-controller.solicitarOTP = (req, res) => {
+// 3. Solicitar Código OTP
+controller.solicitarOTP = async (req, res) => {
     const { cedula, email } = req.body;
+    if (!cedula || !email) return res.status(400).json({ success: false, message: 'Cédula y correo son obligatorios' });
 
-    if (!cedula || !email) {
-        return res.status(400).json({ success: false, message: 'Cédula y correo son obligatorios' });
-    }
-
-    // 1. Generamos un código aleatorio de 6 dígitos
-    const codigoOTP = Math.floor(100000 + Math.random() * 900000).toString();
-    
-    // 2. Calculamos la fecha de expiración (Ej: 15 minutos en el futuro)
+    const codigoOTP = crypto.randomInt(100000, 999999).toString();
     const expiraEn = new Date(Date.now() + 15 * 60000); 
 
-    // 3. LIMPIEZA: Borramos tokens anteriores de este correo (Tu pregunta de la Fase 1)
-    connection.query('DELETE FROM token_otp WHERE email = ?', [email], (errDelete) => {
-        if (errDelete) console.error('Error limpiando tokens viejos:', errDelete);
+    try {
+        // Ejecutamos la limpieza y guardado en la base de datos de forma limpia
+        await PublicoModel.limpiarTokensAntiguos(email);
+        await PublicoModel.guardarTokenOTP(email, codigoOTP, expiraEn);
 
-        // 4. Insertamos el nuevo token en la BD
-        const queryInsert = 'INSERT INTO token_otp (email, codigo, expira_en) VALUES (?, ?, ?)';
-        connection.query(queryInsert, [email, codigoOTP, expiraEn], async (errInsert) => {
-            if (errInsert) {
-                console.error('Error insertando OTP:', errInsert);
-                return res.status(500).json({ success: false, message: 'Error al generar el código' });
-            }
-
-            // 5. Enviamos el correo
-            try {
-                await transporter.sendMail({
-                    from: '"Organización Inteligente" <tu_correo_de_prueba@gmail.com>', // Cambia esto
-                    to: email,
-                    subject: 'Tu código de acceso - Organización Inteligente',
-                    html: `
-                        <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-                            <h2 style="color: #455a9f;">Código de Verificación</h2>
-                            <p>Usa el siguiente código para continuar con tu proceso:</p>
-                            <h1 style="font-size: 36px; color: #ff5500; letter-spacing: 5px;">${codigoOTP}</h1>
-                            <p style="color: #64748b; font-size: 12px;">Este código expirará en 15 minutos.</p>
-                        </div>
-                    `
-                });
-
-                // 6. Verificamos si el usuario ya existe para avisarle al frontend
-                connection.query('SELECT pernombre, perapellido FROM persona WHERE perdoc = ?', [cedula], (errPersona, resultados) => {
-                    const esNuevo = resultados.length === 0;
-                    const nombreUsuario = esNuevo ? null : `${resultados[0].pernombre} ${resultados[0].perapellido}`;
-
-                    res.json({ 
-                        success: true, 
-                        message: 'Código enviado con éxito',
-                        esNuevo: esNuevo,
-                        nombre: nombreUsuario
-                    });
-                });
-
-            } catch (errorMail) {
-                console.error('Error enviando correo OTP:', errorMail);
-                res.status(500).json({ success: false, message: 'Error al enviar el correo' });
-            }
+        await transporter.sendMail({
+            from: '"Organización Inteligente" <' + process.env.EMAIL_USER + '>',
+            to: email,
+            subject: 'Tu código de acceso - Organización Inteligente',
+            html: `
+                <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+                    <h2 style="color: #455a9f;">Código de Verificación</h2>
+                    <p>Usa el siguiente código para continuar con tu proceso:</p>
+                    <h1 style="font-size: 36px; color: #ff5500; letter-spacing: 5px;">${codigoOTP}</h1>
+                    <p style="color: #64748b; font-size: 12px;">Este código expirará en 15 minutos.</p>
+                </div>
+            `
         });
-    });
+
+        // Verificamos si es un usuario nuevo para bifurcar el frontend
+        const resultados = await PublicoModel.verificarUsuarioExistente(cedula);
+        const esNuevo = resultados.length === 0;
+        const nombreUsuario = esNuevo ? null : `${resultados[0].pernombre} ${resultados[0].perapellido}`;
+
+        res.json({ success: true, message: 'Código enviado con éxito', esNuevo, nombre: nombreUsuario });
+
+    } catch (error) {
+        console.error('Error enviando correo OTP:', error);
+        res.status(500).json({ success: false, message: 'Error al enviar el correo o generar token' });
+    }
 };
 
-// --- NUEVA FUNCIÓN: Validar Código OTP ---
-controller.validarOTP = (req, res) => {
+// 4. Validar Código OTP
+controller.validarOTP = async (req, res) => {
     const { email, codigo } = req.body;
+    if (!email || !codigo) return res.status(400).json({ success: false, message: 'Correo y código son obligatorios' });
 
-    if (!email || !codigo) {
-        return res.status(400).json({ success: false, message: 'Correo y código son obligatorios' });
-    }
-
-    const query = 'SELECT id_otp, expira_en, usado FROM token_otp WHERE email = ? AND codigo = ? ORDER BY id_otp DESC LIMIT 1';
-    
-    connection.query(query, [email, codigo], (err, resultados) => {
-        if (err) return res.status(500).json({ success: false, message: 'Error en el servidor' });
-
-        if (resultados.length === 0) {
-            return res.json({ success: false, message: 'Código incorrecto' });
-        }
+    try {
+        const resultados = await PublicoModel.buscarTokenOTP(email, codigo);
+        if (resultados.length === 0) return res.json({ success: false, message: 'Código incorrecto' });
 
         const token = resultados[0];
+        if (token.usado === 1) return res.json({ success: false, message: 'Este código ya fue utilizado' });
+        if (new Date() > new Date(token.expira_en)) return res.json({ success: false, message: 'El código ha expirado. Solicita uno nuevo.' });
 
-        if (token.usado === 1) {
-            return res.json({ success: false, message: 'Este código ya fue utilizado' });
-        }
+        await PublicoModel.marcarTokenUsado(token.id_otp);
+        res.json({ success: true, message: 'Código validado correctamente' });
 
-        if (new Date() > new Date(token.expira_en)) {
-            return res.json({ success: false, message: 'El código ha expirado. Solicita uno nuevo.' });
-        }
-
-        // Si todo está bien, marcamos el código como usado
-        connection.query('UPDATE token_otp SET usado = 1 WHERE id_otp = ?', [token.id_otp], () => {
-            res.json({ success: true, message: 'Código validado correctamente' });
-        });
-    });
-};
-
-// --- NUEVA FUNCIÓN: Obtener cursos pendientes del usuario ---
-controller.obtenerCursosPendientes = (req, res) => {
-    const cedula = req.params.cedula;
-
-    // Hacemos un JOIN triple para traer el nombre real del curso desde la tabla 'capacitacion'
-    const query = `
-        SELECT i.inscodigo, c.capnombre 
-        FROM inscripcion i
-        JOIN capacitacion_oferta co ON i.ins_oferta = co.capofcodigo
-        JOIN capacitacion c ON co.capofcapcodigo = c.capcodigo
-        WHERE i.ins_perdoc = ? AND i.ins_estado = 'pendiente'
-    `;
-
-    connection.query(query, [cedula], (err, resultados) => {
-        if (err) {
-            console.error('Error buscando cursos pendientes:', err);
-            return res.status(500).json([]);
-        }
-        res.json(resultados); // Devolvemos la lista en formato JSON para el frontend
-    });
-};
-
-// --- NUEVA FUNCIÓN: Procesar reporte de pago ---
-controller.reportarPago = (req, res) => {
-    const { curso_pagado, titular_nombre, titular_apellido, banco_origen, referencia, titular_telefono } = req.body;
-
-    // Validación básica de seguridad
-    if (!curso_pagado || !titular_nombre || !referencia) {
-        return res.send('<script>alert("Faltan datos obligatorios para reportar el pago."); window.history.back();</script>');
+    } catch (error) {
+        console.error("Error validando OTP:", error);
+        res.status(500).json({ success: false, message: 'Error en el servidor' });
     }
-
-    // 1. Insertar la información financiera en la tabla pago_reportado
-    const queryInsert = `
-        INSERT INTO pago_reportado 
-        (pago_inscodigo, titular_nombre, titular_apellido, titular_telefono, banco_origen, referencia) 
-        VALUES (?, ?, ?, ?, ?, ?)
-    `;
-
-    connection.query(queryInsert, [curso_pagado, titular_nombre, titular_apellido, titular_telefono, banco_origen, referencia], (errInsert) => {
-        if (errInsert) {
-            console.error('Error insertando pago:', errInsert);
-            return res.status(500).send('<script>alert("Error interno al registrar el pago."); window.history.back();</script>');
-        }
-
-        // 2. Si el pago se guardó bien, actualizamos el estado de la inscripción
-        const queryUpdate = `UPDATE inscripcion SET ins_estado = 'en_revision' WHERE inscodigo = ?`;
-        
-        connection.query(queryUpdate, [curso_pagado], (errUpdate) => {
-            if (errUpdate) {
-                console.error('Error actualizando estado de inscripción:', errUpdate);
-                return res.status(500).send('<script>alert("Tu pago se guardó, pero hubo un error de sistema. Contáctanos."); window.location.href="/";</script>');
-            }
-
-            // Éxito total
-            res.send('<script>alert("¡Pago reportado con éxito! El administrador lo revisará pronto."); window.location.href="/";</script>');
-        });
-    });
 };
 
-// --- NUEVA FUNCIÓN: Obtener ofertas en las que NO está inscrito ---
-controller.obtenerOfertasDisponibles = (req, res) => {
-    const cedula = req.params.cedula;
-
-    // Buscamos ofertas activas (estatus = 1) que NO estén en el historial de inscripciones de esta persona
-    const query = `
-        SELECT co.capofcodigo, c.capnombre 
-        FROM capacitacion_oferta co
-        JOIN capacitacion c ON co.capofcapcodigo = c.capcodigo
-        WHERE co.capofestatus = 1 
-        AND co.capofcodigo NOT IN (
-            SELECT ins_oferta FROM inscripcion WHERE ins_perdoc = ?
-        )
-    `;
-
-    connection.query(query, [cedula], (err, resultados) => {
-        if (err) {
-            console.error('Error buscando ofertas disponibles:', err);
-            return res.status(500).json([]);
-        }
+// 5. Obtener cursos pendientes del usuario
+controller.obtenerCursosPendientes = async (req, res) => {
+    try {
+        const resultados = await PublicoModel.obtenerCursosPendientes(req.params.cedula);
         res.json(resultados);
-    });
+    } catch (error) {
+        console.error('Error buscando cursos pendientes:', error);
+        res.status(500).json([]);
+    }
 };
 
-// --- NUEVA FUNCIÓN: Inscripción Rápida (Usuarios Existentes) ---
-controller.inscripcionRapida = (req, res) => {
-    const { cedula, capacitacion } = req.body;
+// 6. Procesar reporte de pago (Modernizado con JSON)
+controller.reportarPago = async (req, res) => {
+    const { curso_pagado, titular_nombre, titular_apellido, banco_origen, referencia, titular_telefono } = req.body;
+    const comprobante = req.file;
 
-    if (!cedula || !capacitacion) {
-        return res.status(400).json({ success: false, message: 'Faltan datos para la inscripción.' });
+    if (!curso_pagado || !titular_nombre || !referencia || !comprobante) {
+        return res.status(400).json({ success: false, message: 'Faltan datos obligatorios o no adjuntaste el capture.' });
     }
 
-    // Insertamos directo en inscripcion (ya la persona existe)
-    const queryInscripcion = `INSERT INTO inscripcion (ins_perdoc, ins_oferta) VALUES (?, ?)`;
-    
-    connection.query(queryInscripcion, [cedula, capacitacion], (err) => {
-        if (err) {
-            if (err.code === 'ER_DUP_ENTRY') {
-                return res.status(400).json({ success: false, message: 'Ya estás inscrito en esta capacitación.' });
-            }
-            console.error('Error en inscripción rápida:', err);
-            return res.status(500).json({ success: false, message: 'Error interno del servidor.' });
+    const datosPago = [curso_pagado, titular_nombre, titular_apellido, titular_telefono, banco_origen, referencia];
+
+    try {
+        await PublicoModel.registrarPagoYActualizar(datosPago, curso_pagado);
+
+        await transporter.sendMail({
+            from: '"Sistema de Pagos OI" <' + process.env.EMAIL_USER + '>',
+            to: process.env.ADMIN_EMAIL,
+            subject: `💰 Nuevo Pago Reportado: ${titular_nombre} ${titular_apellido} - Ref: ${referencia}`,
+            html: `
+                <h3>Detalles del Nuevo Pago Reportado</h3>
+                <ul>
+                    <li><b>Inscripción N°:</b> ${curso_pagado}</li>
+                    <li><b>Titular:</b> ${titular_nombre} ${titular_apellido}</li>
+                    <li><b>Teléfono:</b> ${titular_telefono}</li>
+                    <li><b>Banco:</b> ${banco_origen}</li>
+                    <li><b>Referencia:</b> ${referencia}</li>
+                </ul>
+                <p>El comprobante ha sido adjuntado.</p>
+            `,
+            attachments: [{ filename: `comprobante_${referencia}.jpg`, content: comprobante.buffer }]
+        });
+
+        res.json({ success: true, message: '¡Pago y capture reportados con éxito! El administrador lo revisará pronto.' });
+    } catch (error) {
+        console.error('Error registrando pago:', error);
+        res.status(500).json({ success: false, message: 'Tu pago se guardó, pero hubo un error con la imagen. Contáctanos.' });
+    }
+};
+
+// 7. Obtener ofertas en las que NO está inscrito
+controller.obtenerOfertasDisponibles = async (req, res) => {
+    try {
+        const resultados = await PublicoModel.obtenerOfertasDisponibles(req.params.cedula);
+        res.json(resultados);
+    } catch (error) {
+        console.error('Error buscando ofertas disponibles:', error);
+        res.status(500).json([]);
+    }
+};
+
+// 8. Inscripción Rápida (Usuarios Existentes)
+controller.inscripcionRapida = async (req, res) => {
+    const { cedula, capacitacion } = req.body;
+    if (!cedula || !capacitacion) return res.status(400).json({ success: false, message: 'Faltan datos para la inscripción.' });
+
+    try {
+        await PublicoModel.inscripcionRapida(cedula, capacitacion);
+        res.json({ success: true, message: '¡Inscripción completada con éxito! Ya puedes reportar tu pago.' });
+    } catch (errorObj) {
+        // CORREGIDO: Usamos res.json en lugar de res.send(<script>)
+        if (errorObj.tipo === 'validacion') {
+            return res.status(400).json({ success: false, message: errorObj.message });
         }
 
-        // Insertamos en el historial académico
-        const queryAcademico = `INSERT INTO persona_capacitacion (pcap_perdoc, pcap_oferta) VALUES (?, ?)`;
-        connection.query(queryAcademico, [cedula, capacitacion], (errAcademico) => {
-            if (errAcademico) console.error('Error en Fase Académica rápida:', errAcademico);
-            
-            res.json({ success: true, message: '¡Inscripción completada con éxito! Ya puedes reportar tu pago.' });
+        if (errorObj.code === 'ER_DUP_ENTRY') {
+            return res.status(400).json({ success: false, message: 'Ya estás inscrito en esta capacitación.' });
+        }
+        console.error('Error en inscripción rápida:', errorObj);
+        res.status(500).json({ success: false, message: 'Error interno del servidor.' });
+    }
+};
+
+// --- MÓDULO B2B (EMPRESAS) ---
+
+// Mostrar la vista de acceso corporativo
+controller.mostrarAccesoEmpresas = (req, res) => {
+    res.render('principal/empresas_login', { title: 'Acceso Corporativo - OI' });
+};
+
+// Solicitar OTP Exclusivo para Empresas
+controller.solicitarOTPEmpresa = async (req, res) => {
+    const { cedula, email } = req.body;
+    if (!cedula || !email) return res.status(400).json({ success: false, message: 'Cédula y correo son obligatorios' });
+
+    try {
+        // 1. Verificamos que sea un contacto autorizado
+        const resultados = await PublicoModel.verificarContactoEmpresa(cedula, email);
+        if (resultados.length === 0) {
+            return res.json({ success: false, message: 'Acceso denegado: No estás registrado como contacto corporativo.' });
+        }
+
+        // 2. Generamos el OTP
+        const codigoOTP = crypto.randomInt(100000, 999999).toString();
+        const expiraEn = new Date(Date.now() + 15 * 60000); 
+
+        // 3. Guardamos el Token (Reutilizando la lógica que ya tenías)
+        await PublicoModel.limpiarTokensAntiguos(email);
+        await PublicoModel.guardarTokenOTP(email, codigoOTP, expiraEn);
+
+        // 4. Enviamos el correo
+        await transporter.sendMail({
+            from: '"Organización Inteligente Corporativo" <' + process.env.EMAIL_USER + '>',
+            to: email,
+            subject: 'Tu código de acceso Corporativo - OI',
+            html: `
+                <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+                    <h2 style="color: #455a9f;">Acceso B2B Empresas</h2>
+                    <p>Usa el siguiente código para ingresar al portal de multi-inscripciones:</p>
+                    <h1 style="font-size: 36px; color: #10b981; letter-spacing: 5px;">${codigoOTP}</h1>
+                    <p style="color: #64748b; font-size: 12px;">Este código expirará en 15 minutos.</p>
+                </div>
+            `
         });
-    });
+
+        res.json({ success: true, message: 'Código corporativo enviado con éxito.' });
+    } catch (error) {
+        console.error('Error en OTP Empresa:', error);
+        res.status(500).json({ success: false, message: 'Error interno al generar código.' });
+    }
+};
+
+// Obtener API de Ofertas Activas para el menú desplegable corporativo
+controller.apiOfertasActivas = async (req, res) => {
+    try {
+        const ofertas = await PublicoModel.obtenerOfertasActivas();
+        res.json(ofertas);
+    } catch (error) {
+        res.status(500).json([]);
+    }
+};
+
+// Recibir y procesar el Lote Matriz
+controller.registrarLoteEmpresa = async (req, res) => {
+    const { cedula_empresa, email_empresa, capacitacion, empleados } = req.body;
+    
+    if (!empleados || empleados.length === 0) {
+        return res.status(400).json({ success: false, message: 'La matriz está vacía.' });
+    }
+
+    try {
+        // Validamos la identidad de la empresa nuevamente por seguridad
+        const empresas = await PublicoModel.verificarContactoEmpresa(cedula_empresa, email_empresa);
+        if (empresas.length === 0) return res.status(403).json({ success: false, message: 'Sesión corporativa inválida.' });
+        
+        const empresaId = empresas[0].id_contacto;
+
+        // Mandamos el paquete a la transacción
+        await PublicoModel.registrarLoteTransaccion(empresaId, capacitacion, empleados);
+        
+        res.json({ success: true, message: `¡Lote de ${empleados.length} participantes registrado con éxito!` });
+    } catch (errorObj) {
+        // CORREGIDO: Usamos res.json en lugar de res.send(<script>)
+        if (errorObj.tipo === 'validacion') {
+            return res.status(400).json({ success: false, message: errorObj.message });
+        }
+        
+        console.error('Error procesando lote B2B:', errorObj);
+        if (errorObj.code === 'ER_DUP_ENTRY') {
+            res.status(400).json({ success: false, message: 'Operación cancelada: Uno o más empleados del lote ya están inscritos en esa capacitación.' });
+        } else {
+            res.status(500).json({ success: false, message: 'Error interno de base de datos procesando el lote.' });
+        }
+    }
+};
+
+controller.obtenerLoteExistente = async (req, res) => {
+    const { cedula_empresa, email_empresa, capacitacion } = req.body;
+    try {
+        const empresas = await PublicoModel.verificarContactoEmpresa(cedula_empresa, email_empresa);
+        if (empresas.length === 0) return res.json([]);
+        const empleados = await PublicoModel.obtenerLoteExistente(empresas[0].id_contacto, capacitacion);
+        res.json(empleados);
+    } catch (error) {
+        res.json([]);
+    }
 };
 
 module.exports = controller;

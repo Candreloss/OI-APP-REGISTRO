@@ -1,9 +1,13 @@
 const mysql = require('mysql');
-module.exports = () => {
-    return mysql.createConnection({
-        host: 'localhost',
-        user: 'root',
-        password: '12345678',
-        database: 'oi_cap_db_final'
-    });
-}
+
+// Creamos el Pool UNA SOLA VEZ
+const pool = mysql.createPool({
+    connectionLimit: 10, 
+    host: process.env.DB_HOST,
+    user: process.env.DB_USER,
+    password: process.env.DB_PASS,
+    database: process.env.DB_NAME
+});
+
+// Exportamos LA INSTANCIA (sin función flecha)
+module.exports = pool;

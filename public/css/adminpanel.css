@@ -318,3 +318,15 @@ body { background-color: var(--bg-color); color: var(--text-main); }
     transform: scale(1.002); /* Un micro-crecimiento para resaltar la fila entera */
     box-shadow: 0 4px 10px rgba(0,0,0,0.02);
 }
+
+/* --- SIDEBAR --- */
+.sidebar {
+    background-color: var(--sidebar-bg);
+    color: var(--white);
+    display: flex;
+    flex-direction: column;
+    /* Nuevas propiedades para fijar la barra: */
+    position: sticky;
+    top: 0;
+    height: 100vh;
+}
