@@ -1,4 +1,4 @@
-const mysql = require('mysql');
+const mysql = require('mysql2');
 
 // Creamos el Pool UNA SOLA VEZ
 const pool = mysql.createPool({

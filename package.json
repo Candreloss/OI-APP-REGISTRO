@@ -28,7 +28,7 @@
     "express-session": "^1.19.0",
     "jspdf": "^4.1.0",
     "multer": "^2.2.0",
-    "mysql": "^2.18.1",
+    "mysql2": "^3.22.6",
     "nodemailer": "^9.0.1"
   }
 }
