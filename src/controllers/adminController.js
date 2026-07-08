@@ -3,7 +3,7 @@ const bcrypt = require('bcryptjs');
 const transporter = require('../utils/mailer');
 
 // IMPORTAMOS NUESTRO NUEVO MODELO
-const AdminModel = require('../models/AdminModel');
+const AdminModel = require('../models/adminModel');
 
 const adminController = {};
 
