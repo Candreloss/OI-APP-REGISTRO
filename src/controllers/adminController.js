@@ -269,7 +269,7 @@ adminController.aprobarLoteB2B = async (req, res) => {
                     to: emp.peremail,
                     subject: '✅ ¡Inscripción Corporativa Confirmada! - OI',
                     html: `<h3>¡Hola, ${emp.pernombre}!</h3>
-                           <p>Tu empresa ha gestionado y conciliado tu inscripción exitosamente.</p>
+                           <p>Tu empresa ha gestionado y conciliado un pago o abono en tu nombre exitosamente.</p>
                            <p>Tu cupo en <b>${emp.capnombre}</b> está 100% confirmado.</p>
                            <p>¡Bienvenido/a a esta nueva capacitación!</p>`
                 });
@@ -285,7 +285,7 @@ adminController.aprobarLoteB2B = async (req, res) => {
             await transporter.sendMail({
                 from: '"Organización Inteligente" <' + process.env.EMAIL_USER + '>',
                 to: infoEmpresa.emp_email,
-                subject: '✅ ¡Pago Corporativo Aprobado con Éxito!',
+                subject: '✅ ¡Pago o Abono Corporativo Aprobado con Éxito!',
                 html: `
                     <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; border: 1px solid #e2e8f0; border-radius: 8px;">
                         <h2 style="color: #10b981;">Pago Aprobado y Conciliado</h2>
