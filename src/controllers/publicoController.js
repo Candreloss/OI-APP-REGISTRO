@@ -3,7 +3,7 @@ const crypto = require('crypto'); // NUEVO: Módulo de seguridad nativo
 const transporter = require('../utils/mailer');
 
 // IMPORTAMOS NUESTRO NUEVO MODELO PÚBLICO
-const PublicoModel = require('../models/PublicoModel');
+const PublicoModel = require('../models/publicoModel');
 
 const controller = {};
 
