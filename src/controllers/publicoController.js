@@ -367,12 +367,12 @@ controller.reportarPagoB2B = async (req, res) => {
         await transporter.sendMail({
             from: '"Sistema B2B" <' + process.env.EMAIL_USER + '>',
             to: process.env.ADMIN_EMAIL,
-            subject: `🏢 Pago Corporativo Reportado: Lote #${curso_pagado} (${pendientes.length} empleados)`,
+            subject: `🏢 Pago o Abono Corporativo Reportado: Lote #${curso_pagado} (${pendientes.length} empleados)`,
             html: `
-                <h3>Nuevo Pago de Lote Corporativo</h3>
+                <h3>Nuevo Pago o Abono de Lote Corporativo</h3>
                 <ul>
                     <li><b>Empresa:</b> ${email_empresa}</li>
-                    <li><b>Cantidad de Empleados Pagados:</b> ${pendientes.length}</li>
+                    <li><b>Cantidad de Empleados contemplados:</b> ${pendientes.length}</li>
                     <li><b>Titular:</b> ${titular_nombre} ${titular_apellido}</li>
                     <li><b>Referencia:</b> ${referencia}</li>
                 </ul>
