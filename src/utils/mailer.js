@@ -3,9 +3,8 @@ const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
-    port: 587,
-    secure: false, // false para el puerto 587 (TLS) y true para el puerto 465 (SSL)
-    requireTLS: true,   // <-- Obliga a encriptar la conexión
+    port: 465,
+    secure: true, // true para el puerto 465 (SSL)
     pool: true,   // NUEVO: Activa el pool de conexiones (mantiene la conexión viva)
     connectionTimeout: 15000, // NUEVO: Espera hasta 15 segundos para conectar
     socketTimeout: 20000,     // NUEVO: Si la red se guinda, corta a los 20 segundos
