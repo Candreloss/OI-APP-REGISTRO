@@ -8,7 +8,8 @@ const transporter = nodemailer.createTransport({
     pool: true,   // NUEVO: Activa el pool de conexiones (mantiene la conexión viva)
     connectionTimeout: 15000, // NUEVO: Espera hasta 15 segundos para conectar
     socketTimeout: 20000,     // NUEVO: Si la red se guinda, corta a los 20 segundos
-    maxConnections: 5,        // NUEVO: Permite hasta 5 envíos simultáneos
+    maxConnections: 5,
+    family: 4,        // NUEVO: Permite hasta 5 envíos simultáneos
     auth: {
         user: process.env.EMAIL_USER,
         pass: process.env.EMAIL_PASS
