@@ -48,26 +48,30 @@ const resend = new Resend(process.env.RESEND_API_KEY);
 const transporter = {
     sendMail: async (opciones) => {
         try {
-            const data = await resend.emails.send({
-                // ATENCIÓN: En la capa gratuita sin dominio verificado, 
-                // Resend OBLIGA a que el remitente sea este correo exacto:
+            // "Desempaquetamos" el data y el error que nos devuelve Resend
+            const { data, error } = await resend.emails.send({
                 from: 'onboarding@resend.dev', 
-                
                 to: opciones.to,
                 subject: opciones.subject,
                 html: opciones.html,
-                
-                // Mapeamos los adjuntos (attachments) si los hay (como en el pago B2B)
                 attachments: opciones.attachments ? opciones.attachments.map(att => ({
                     filename: att.filename,
-                    content: att.content // Resend acepta el Buffer directamente, igual que Nodemailer
+                    content: att.content 
                 })) : []
             });
 
-            console.log('[MAILER] ✅ Correo enviado vía Resend:', data.id);
+            // Si Resend nos devuelve un error interno, lo atrapamos aquí
+            if (error) {
+                console.error('[MAILER] ❌ Error devuelto por Resend:', error);
+                throw error;
+            }
+
+            // Ahora sí, data.id existirá y se imprimirá el código real
+            console.log('[MAILER] ✅ Correo enviado exitosamente, ID:', data.id);
             return data;
+            
         } catch (error) {
-            console.error('[MAILER] ❌ Error con Resend:', error);
+            console.error('[MAILER] ❌ Error general en envío:', error);
             throw error;
         }
     }
