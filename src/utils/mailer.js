@@ -1,5 +1,10 @@
 // src/utils/mailer.js
-const nodemailer = require('nodemailer');
+
+
+//------------------------------
+//CONFIGURACION CON NODEMAILER
+//------------------------------
+/*const nodemailer = require('nodemailer');
 
 const transporter = nodemailer.createTransport({
     host: 'smtp.gmail.com',
@@ -25,5 +30,51 @@ transporter.verify().then(() => {
 }).catch(err => {
     console.error('[MAILER] ❌ Error de conexión:', err);
 });
+
+module.exports = transporter;
+*/
+
+
+//------------------------------
+//CONFIGURACION CON RESEND
+//------------------------------
+// src/utils/mailer.js
+const { Resend } = require('resend');
+
+// Inicializamos Resend con la clave de entorno
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+// Creamos un objeto "transporter" falso para no tener que reescribir los controladores
+const transporter = {
+    sendMail: async (opciones) => {
+        try {
+            const data = await resend.emails.send({
+                // ATENCIÓN: En la capa gratuita sin dominio verificado, 
+                // Resend OBLIGA a que el remitente sea este correo exacto:
+                from: 'onboarding@resend.dev', 
+                
+                to: opciones.to,
+                subject: opciones.subject,
+                html: opciones.html,
+                
+                // Mapeamos los adjuntos (attachments) si los hay (como en el pago B2B)
+                attachments: opciones.attachments ? opciones.attachments.map(att => ({
+                    filename: att.filename,
+                    content: att.content // Resend acepta el Buffer directamente, igual que Nodemailer
+                })) : []
+            });
+
+            console.log('[MAILER] ✅ Correo enviado vía Resend:', data.id);
+            return data;
+        } catch (error) {
+            console.error('[MAILER] ❌ Error con Resend:', error);
+            throw error;
+        }
+    }
+};
+
+console.log('================================================');
+console.log('[MAILER] 🚀 Motor de correos cambiado a RESEND API');
+console.log('================================================');
 
 module.exports = transporter;
