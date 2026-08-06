@@ -35,8 +35,9 @@ module.exports = transporter;
 */
 
 
+/*
 //------------------------------
-//CONFIGURACION CON RESEND
+//CONFIGURACION CON RESEND CON EL CORREO PREDETERMINADO DEL SANDBOX
 //------------------------------
 // src/utils/mailer.js
 const { Resend } = require('resend');
@@ -79,6 +80,49 @@ const transporter = {
 
 console.log('================================================');
 console.log('[MAILER] 🚀 Motor de correos cambiado a RESEND API');
+console.log('================================================');
+
+module.exports = transporter;
+*/
+
+// src/utils/mailer.js
+const { Resend } = require('resend');
+
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+const transporter = {
+    sendMail: async (opciones) => {
+        try {
+            const { data, error } = await resend.emails.send({
+                // 👇 AQUÍ ESTÁ EL CAMBIO CLAVE 👇
+                from: 'Organización Inteligente <notificaciones@organizacioninteligente.com>', 
+                // 👆 -------------------------- 👆
+                to: opciones.to,
+                subject: opciones.subject,
+                html: opciones.html,
+                attachments: opciones.attachments ? opciones.attachments.map(att => ({
+                    filename: att.filename,
+                    content: att.content 
+                })) : []
+            });
+
+            if (error) {
+                console.error('[MAILER] ❌ Error devuelto por Resend:', error);
+                throw error;
+            }
+
+            console.log('[MAILER] ✅ Correo enviado exitosamente, ID:', data.id);
+            return data;
+            
+        } catch (error) {
+            console.error('[MAILER] ❌ Error general en envío:', error);
+            throw error;
+        }
+    }
+};
+
+console.log('================================================');
+console.log('[MAILER] 🚀 Motor de correos conectado con Dominio Oficial');
 console.log('================================================');
 
 module.exports = transporter;
