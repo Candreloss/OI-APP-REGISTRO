@@ -25,6 +25,7 @@ app.use(helmet({
         directives: {
             defaultSrc: ["'self'"],
             scriptSrc: ["'self'", "'unsafe-inline'", 'https://code.iconify.design'],
+            scriptSrcAttr: ["'unsafe-inline'"],
             styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
             fontSrc: ["'self'", 'https://fonts.gstatic.com'],
             connectSrc: ["'self'", 'https://api.iconify.design'],
@@ -131,6 +132,7 @@ app.use((req, res) => {
 // eslint-disable-next-line no-unused-vars
 app.use((err, req, res, next) => {
     if (err === invalidCsrfTokenError) {
+        logger.warn({ ruta: req.path, metodo: req.method, ip: req.ip }, 'CSRF token inválido o expirado');
         return res.status(403).json({ success: false, message: 'Token de seguridad inválido o expirado. Recarga la página.' });
     }
     logger.error({ err, ruta: req.path, metodo: req.method }, 'Error no controlado');

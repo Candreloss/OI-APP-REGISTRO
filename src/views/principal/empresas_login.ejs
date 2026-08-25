@@ -215,6 +215,11 @@
                 const data = await response.json();
 
                 if(data.success) {
+                    // La sesión se regeneró; refrescamos el token CSRF cacheado.
+                    if (typeof window.refreshCsrfToken === 'function') {
+                        await window.refreshCsrfToken();
+                    }
+
                     document.getElementById('step-2-otp-emp').style.display = 'none';
                     document.getElementById('step-3-matriz').style.display = 'block';
                     document.getElementById('nombre-empresa-auth').innerText = `Gestión autorizada para: ${correoEmpresa}`;

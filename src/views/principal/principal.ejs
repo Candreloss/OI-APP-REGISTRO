@@ -32,14 +32,12 @@
 
         <div class="top-bar-right">
           <span class="admin-text">¿Eres admin?</span>
-          <form action="/login" method="POST" style="margin: 0;">
-            <button type="submit" class="btn-secondary" data-media-type="banani-button">
-              <div class="icon-container">
-                <iconify-icon icon="lucide:log-in" style="font-size: 16px; color: white"></iconify-icon>
-              </div>
-              Login
-            </button>
-          </form>
+          <a href="/admin" class="btn-secondary" data-media-type="banani-button" style="display:inline-flex;align-items:center;gap:6px;text-decoration:none;">
+            <div class="icon-container">
+              <iconify-icon icon="lucide:log-in" style="font-size: 16px; color: white"></iconify-icon>
+            </div>
+            Login
+          </a>
           <a href="/empresas" style="font-size: 0.85rem; font-weight: 600; color: #10b981; text-decoration: none; margin-right: 15px;">
               Módulo Empresas
           </a>
@@ -413,6 +411,14 @@
               const data = await response.json();
 
               if(data.success) {
+                  // La sesión se regeneró durante la validación OTP; el token
+                  // CSRF cacheado quedó obsoleto. Lo refrescamos ahora para
+                  // que la siguiente mutación (inscripción, pago, etc.) no
+                  // falle con 403.
+                  if (typeof window.refreshCsrfToken === 'function') {
+                      await window.refreshCsrfToken();
+                  }
+
                   step2.style.display = 'none';
                   
                   if(data.esNuevo) {

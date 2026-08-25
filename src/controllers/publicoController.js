@@ -104,11 +104,11 @@ controller.solicitarOTP = async (req, res) => {
         await PublicoModel.guardarTokenOTP(email, codigoOTP, expiraEn);
         req.session.otpPendiente = { cedula, email, tipo: 'participante' };
 
-        await transporter.sendMail({
+        transporter.sendMail({
             to: email,
             subject: 'Tu código de acceso - Organización Inteligente',
             html: plantillaOTP('Código de Verificación', '#ff5500', 'Usa el siguiente código para continuar con tu proceso:', codigoOTP)
-        });
+        }).catch(err => logger.error('Error enviando correo OTP:', err.message));
 
         res.json({ success: true, message: MENSAJE_OTP_GENERICO });
     } catch (error) {
@@ -315,11 +315,11 @@ controller.solicitarOTPEmpresa = async (req, res) => {
         await PublicoModel.guardarTokenOTP(email, codigoOTP, expiraEn);
         req.session.otpPendiente = { cedula, email, tipo: 'empresa' };
 
-        await transporter.sendMail({
+        transporter.sendMail({
             to: email,
             subject: 'Tu código de acceso Corporativo - OI',
             html: plantillaOTP('Acceso B2B Empresas', '#10b981', 'Usa el siguiente código para ingresar al portal de multi-inscripciones:', codigoOTP)
-        });
+        }).catch(err => logger.error('Error enviando correo OTP Empresa:', err.message));
 
         res.json({ success: true, message: MENSAJE_OTP_GENERICO });
     } catch (error) {

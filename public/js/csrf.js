@@ -12,6 +12,9 @@
     return _token;
   }
 
+  // Expuesta para que las vistas puedan forzar refresh tras regenerar sesión.
+  window.refreshCsrfToken = function () { return asegurarToken(true); };
+
   window.apiFetch = async function (url, opciones) {
     opciones = opciones || {};
     opciones.credentials = 'same-origin';

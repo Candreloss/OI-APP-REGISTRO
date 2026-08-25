@@ -14,8 +14,8 @@ const port = app.get('port');
 app.listen(port, () => {
     logger.info(`
     ================================================
-    🚀 SERVIDOR CORRIENDO EN PUERTO: ${port}
-    🌍 ENTORNO: ${process.env.NODE_ENV || 'development'}
+    --> SERVIDOR CORRIENDO EN PUERTO: ${port}
+    --> ENTORNO: ${process.env.NODE_ENV || 'development'}
     ================================================
     `);
 });
