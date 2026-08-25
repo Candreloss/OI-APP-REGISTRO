@@ -66,9 +66,13 @@
                                             <iconify-icon icon="lucide:check-circle-2"></iconify-icon> <span>Aprobar Lote</span>
                                         </button>
 
-                                        <button type="button" 
-                                                onclick="rechazarLote('<%= lote.id_contacto %>', '<%= lote.capofcodigo %>', '<%= lote.empresa_nombre %>', '<%= lote.total_empleados %>')" 
-                                                class="px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition flex items-center gap-2 shadow-sm" title="Rechazar Pago">
+                                        <%# Datos vía data-*: nunca interpolar nombres de empresa en JS inline %>
+                                        <button type="button"
+                                                class="btn-rechazar-lote px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition flex items-center gap-2 shadow-sm"
+                                                data-empresa-id="<%= lote.id_contacto %>"
+                                                data-oferta-id="<%= lote.capofcodigo %>"
+                                                data-empresa-nombre="<%= lote.empresa_nombre %>"
+                                                data-total="<%= lote.total_empleados %>" title="Rechazar Pago">
                                             <iconify-icon icon="lucide:x-circle"></iconify-icon> <span>Rechazar Pago</span>
                                         </button>
                                     </div>
@@ -155,6 +159,7 @@
         </main>
     </div>
 
+    <script src="/js/csrf.js"></script>
     <script>
         async function aprobarLoteCompleto(btnElement) {
             // Extraemos los datos de forma segura desde los atributos del botón
@@ -171,7 +176,7 @@
             btnElement.disabled = true;
 
             try {
-                const response = await fetch('/panel/empresas/aprobar-lote', {
+                const response = await apiFetch('/panel/empresas/aprobar-lote', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ empresa_id: empresaId, oferta_id: ofertaId })
@@ -194,38 +199,43 @@
             }
         }
 
-        async function rechazarLote(empresaId, ofertaId, empresaNombre, total) {
-            if (!confirm(`⚠️ ATENCIÓN: Estás a punto de RECHAZAR el pago del lote de ${total} empleados de la empresa ${empresaNombre}.\n\nSe eliminará el comprobante actual y la empresa tendrá que subir uno nuevo.\n\n¿Deseas continuar?`)) return;
+        document.querySelectorAll('.btn-rechazar-lote').forEach((btnElement) => {
+            btnElement.addEventListener('click', async () => {
+                const empresaId = btnElement.dataset.empresaId;
+                const ofertaId = btnElement.dataset.ofertaId;
+                const empresaNombre = btnElement.dataset.empresaNombre;
+                const total = btnElement.dataset.total;
 
-            // Buscamos el botón que fue clickeado para ponerlo en estado de carga
-            const btnElement = event.currentTarget;
-            const originalHTML = btnElement.innerHTML;
-            btnElement.innerHTML = '<iconify-icon icon="lucide:loader-2" class="animate-spin"></iconify-icon>';
-            btnElement.disabled = true;
+                if (!confirm(`⚠️ ATENCIÓN: Estás a punto de RECHAZAR el pago del lote de ${total} empleados de la empresa ${empresaNombre}.\n\nSe eliminará el comprobante actual y la empresa tendrá que subir uno nuevo.\n\n¿Deseas continuar?`)) return;
 
-            try {
-                const response = await fetch('/panel/empresas/rechazar-lote', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ empresa_id: empresaId, oferta_id: ofertaId })
-                });
+                const originalHTML = btnElement.innerHTML;
+                btnElement.innerHTML = '<iconify-icon icon="lucide:loader-2" class="animate-spin"></iconify-icon>';
+                btnElement.disabled = true;
 
-                const data = await response.json();
+                try {
+                    const response = await apiFetch('/panel/empresas/rechazar-lote', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ empresa_id: empresaId, oferta_id: ofertaId })
+                    });
 
-                if (data.success) {
-                    alert(data.message);
-                    window.location.reload(); 
-                } else {
-                    alert("Error: " + data.message);
+                    const data = await response.json();
+
+                    if (data.success) {
+                        alert(data.message);
+                        window.location.reload();
+                    } else {
+                        alert("Error: " + data.message);
+                        btnElement.innerHTML = originalHTML;
+                        btnElement.disabled = false;
+                    }
+                } catch (error) {
+                    alert("Error de red conectando con el servidor.");
                     btnElement.innerHTML = originalHTML;
                     btnElement.disabled = false;
                 }
-            } catch (error) {
-                alert("Error de red conectando con el servidor.");
-                btnElement.innerHTML = originalHTML;
-                btnElement.disabled = false;
-            }
-        }
+            });
+        });
 
     </script>
 </body>

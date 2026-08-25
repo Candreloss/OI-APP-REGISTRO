@@ -150,7 +150,7 @@
 
               <div class="form-group full-width">
                 <label class="label">Teléfono asociado al pago (Pago Móvil / Zelle)</label>
-                <input name="titular_telefono" type="text" class="input" placeholder="Ej. 04141234567" required />
+                <input name="titular_telefono" type="tel" class="input" placeholder="Ej. 04141234567 o +58 4141234567" required />
               </div>
 
               <div class="form-group full-width" style="margin-top: 1rem; border: 2px dashed var(--border); padding: 1.5rem; border-radius: var(--radius); text-align: center; background-color: var(--background);">
@@ -334,6 +334,7 @@
       </div>
     </div>
 
+    <script src="/js/csrf.js"></script>
     <script>
       let correoActual = '';
       let cedulaActual = '';
@@ -363,7 +364,7 @@
           btnSolicitar.disabled = true;
 
           try {
-              const response = await fetch('/api/solicitar-otp', {
+              const response = await apiFetch('/api/solicitar-otp', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ cedula, email })
@@ -372,10 +373,10 @@
               const data = await response.json();
 
               if(data.success) {
+                  // La bifurcación nuevo/existente llega DESPUÉS de validar el
+                  // código (anti-enumeración), nunca antes.
                   correoActual = email;
                   cedulaActual = cedula;
-                  esUsuarioNuevo = data.esNuevo;
-                  nombreActual = data.nombre;
                   
                   document.getElementById('otp-subtitle').innerText = `Hemos enviado un código a ${email}`;
                   step1.style.display = 'none';
@@ -403,7 +404,7 @@
           btnValidar.disabled = true;
 
           try {
-              const response = await fetch('/api/validar-otp', {
+              const response = await apiFetch('/api/validar-otp', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ email: correoActual, codigo })
@@ -414,12 +415,12 @@
               if(data.success) {
                   step2.style.display = 'none';
                   
-                  if(esUsuarioNuevo) {
+                  if(data.esNuevo) {
                       document.getElementById('hidden-doc').value = cedulaActual;
                       document.getElementById('hidden-email').value = correoActual;
                       step3Nuevo.style.display = 'block';
                   } else {
-                      document.getElementById('welcome-user-name').innerText = '¡Hola, ' + nombreActual + '!';
+                      document.getElementById('welcome-user-name').innerText = '¡Hola, ' + (data.nombre || '') + '!';
                       step3Existente.style.display = 'block';
                   }
               } else {
@@ -448,7 +449,7 @@
           selectOfertas.innerHTML = '<option value="" disabled selected>Buscando capacitaciones...</option>';
 
           try {
-              const response = await fetch(`/api/ofertas-disponibles/${cedulaActual}`);
+              const response = await apiFetch(`/api/ofertas-disponibles/${cedulaActual}`);
               const ofertas = await response.json();
 
               if(ofertas.length > 0) {
@@ -485,7 +486,7 @@
           btn.disabled = true;
 
           try {
-              const response = await fetch('/api/inscripcion-rapida', {
+              const response = await apiFetch('/api/inscripcion-rapida', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({ cedula: cedulaActual, capacitacion: capacitacion })
@@ -517,7 +518,7 @@
           selectCursos.innerHTML = '<option value="" disabled selected>Buscando tus inscripciones pendientes...</option>';
 
           try {
-              const response = await fetch(`/api/cursos-pendientes/${cedulaActual}`);
+              const response = await apiFetch(`/api/cursos-pendientes/${cedulaActual}`);
               const cursos = await response.json();
 
               if(cursos.length > 0) {
@@ -551,7 +552,7 @@
           btn.disabled = true;
 
           try {
-              const response = await fetch('/registro', {
+              const response = await apiFetch('/registro', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify(data)
@@ -583,7 +584,7 @@
 
           try {
               // A diferencia del registro, el pago envía un archivo, por lo que mandamos el FormData crudo sin JSON
-              const response = await fetch('/api/reportar-pago', {
+              const response = await apiFetch('/api/reportar-pago', {
                   method: 'POST',
                   body: formData
               });

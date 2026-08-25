@@ -209,6 +209,39 @@ PublicoModel.verificarContactoEmpresa = (cedula, email) => {
     });
 };
 
+// 12b. Identidad previa al OTP: ¿(cedula,email) corresponde a un participante o a un contacto de empresa?
+// Devuelve { tipo: 'participante' | 'empresa' } o null si el par no existe (anti-enumeración).
+PublicoModel.verificarIdentidadParaOTP = (cedula, email) => {
+    return new Promise((resolve, reject) => {
+        const qPersona = 'SELECT perdoc FROM persona WHERE perdoc = ? AND peremail = ? LIMIT 1';
+        connection.query(qPersona, [cedula, email], (errP, rowsP) => {
+            if (errP) return reject(errP);
+            if (rowsP.length > 0) return resolve({ tipo: 'participante' });
+
+            const qEmpresa = 'SELECT id_contacto FROM contacto_empresa WHERE emp_doc = ? AND emp_email = ? LIMIT 1';
+            connection.query(qEmpresa, [cedula, email], (errE, rowsE) => {
+                if (errE) return reject(errE);
+                if (rowsE.length > 0) return resolve({ tipo: 'empresa' });
+                resolve(null);
+            });
+        });
+    });
+};
+
+// 12c. Verificar que una inscripción pertenece a una cédula (anti-IDOR en reporte de pagos)
+PublicoModel.obtenerInscripcionDeUsuario = (inscodigo, cedula) => {
+    return new Promise((resolve, reject) => {
+        connection.query(
+            'SELECT inscodigo, ins_estado FROM inscripcion WHERE inscodigo = ? AND ins_perdoc = ?',
+            [inscodigo, cedula],
+            (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows[0] || null);
+            }
+        );
+    });
+};
+
 // 13. Procesar lote masivo de inscripciones B2B con Transacciones y Pool
 PublicoModel.registrarLoteTransaccion = (empresaId, ofertaId, empleados) => {
     return new Promise((resolve, reject) => {

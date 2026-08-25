@@ -84,12 +84,13 @@
                                         <a href="/panel/ofertas/editar/<%= oferta.capofcodigo %>" class="btn-icon" style="text-decoration: none; width: 32px; height: 32px; display: inline-flex; justify-content: center; align-items: center;" title="Editar">
                                             <iconify-icon icon="lucide:edit"></iconify-icon>
                                         </a>
-                                        <a href="/panel/ofertas/toggle-cupos/<%= oferta.capofcodigo %>" class="btn-icon <%= oferta.cupos_bloqueados === 1 ? 'danger' : '' %>" style="text-decoration: none; width: 32px; height: 32px; display: inline-flex; justify-content: center; align-items: center;" title="<%= oferta.cupos_bloqueados === 1 ? 'Abrir Inscripciones' : 'Cerrar Inscripciones' %>">
+                                        <%# Mutaciones por POST con CSRF (antes eran enlaces GET) %>
+                                        <button type="button" class="btn-toggle-cupos btn-icon <%= oferta.cupos_bloqueados === 1 ? 'danger' : '' %>" data-id="<%= oferta.capofcodigo %>" style="width: 32px; height: 32px; display: inline-flex; justify-content: center; align-items: center;" title="<%= oferta.cupos_bloqueados === 1 ? 'Abrir Inscripciones' : 'Cerrar Inscripciones' %>">
                                             <iconify-icon icon="<%= oferta.cupos_bloqueados === 1 ? 'lucide:lock' : 'lucide:unlock' %>"></iconify-icon>
-                                        </a>
-                                        <a href="/panel/ofertas/toggle/<%= oferta.capofcodigo %>" class="btn-icon <%= oferta.capofestatus === 1 ? 'danger' : '' %>" style="text-decoration: none; width: 32px; height: 32px; display: inline-flex; justify-content: center; align-items: center;" title="<%= oferta.capofestatus === 1 ? 'Desactivar' : 'Activar' %>">
+                                        </button>
+                                        <button type="button" class="btn-toggle-estatus btn-icon <%= oferta.capofestatus === 1 ? 'danger' : '' %>" data-id="<%= oferta.capofcodigo %>" data-desactivar="<%= oferta.capofestatus === 1 ? '1' : '0' %>" style="width: 32px; height: 32px; display: inline-flex; justify-content: center; align-items: center;" title="<%= oferta.capofestatus === 1 ? 'Desactivar' : 'Activar' %>">
                                             <iconify-icon icon="<%= oferta.capofestatus === 1 ? 'lucide:power-off' : 'lucide:power' %>"></iconify-icon>
-                                        </a>
+                                        </button>
                                     </td>
                                 </tr>
                             <% }) %>
@@ -101,5 +102,33 @@
             </div>
         </main>
     </div>
+
+    <script src="/js/csrf.js"></script>
+    <script>
+      async function toggleOferta(url, confirmacion) {
+          if (confirmacion && !confirm(confirmacion)) return;
+          try {
+              const response = await apiFetch(url, { method: 'POST' });
+              if (response.redirected || response.ok) {
+                  window.location.reload();
+              } else {
+                  alert('No se pudo actualizar la oferta.');
+              }
+          } catch (e) {
+              alert('Error de red conectando con el servidor.');
+          }
+      }
+
+      document.querySelectorAll('.btn-toggle-cupos').forEach((btn) => {
+          btn.addEventListener('click', () => toggleOferta(`/panel/ofertas/toggle-cupos/${btn.dataset.id}`));
+      });
+
+      document.querySelectorAll('.btn-toggle-estatus').forEach((btn) => {
+          btn.addEventListener('click', () => toggleOferta(
+              `/panel/ofertas/toggle/${btn.dataset.id}`,
+              btn.dataset.desactivar === '1' ? '¿Seguro que deseas desactivar esta oferta? Ya no será visible para el público.' : null
+          ));
+      });
+    </script>
 </body>
 </html>

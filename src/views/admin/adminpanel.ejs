@@ -114,15 +114,14 @@
                                     <span class="offer-code">Código: <%= oferta.capofcodigo %> | Cupos: <%= oferta.capofcupos %></span>
                                 </div>
                                 <div class="offer-actions">
-                                    <!-- Botón de Editar (Temporalmente inactivo) -->
                                     <a href="/panel/ofertas/editar/<%= oferta.capofcodigo %>" class="btn-icon" style="text-decoration: none;" title="Editar">
                                     <iconify-icon icon="lucide:edit"></iconify-icon>
                                     </a>
-                                    
-                                    <!-- Botón de Desactivar (Corregido: Solo usamos la etiqueta <a> con la clase del botón) -->
-                                    <a href="/panel/ofertas/toggle/<%= oferta.capofcodigo %>" class="btn-icon danger" style="text-decoration: none;" title="Desactivar" onclick="return confirm('¿Seguro que deseas desactivar esta oferta? Ya no será visible para el público.')">
+
+                                    <%# Mutación por POST con CSRF (antes era enlace GET) %>
+                                    <button type="button" class="btn-desactivar-oferta btn-icon danger" data-id="<%= oferta.capofcodigo %>" style="border: none; background: none; cursor: pointer;" title="Desactivar">
                                         <iconify-icon icon="lucide:power-off"></iconify-icon>
-                                    </a>
+                                    </button>
                                 </div>
                             </div>
                         <% }); %>
@@ -134,5 +133,21 @@
 
         </main>
     </div>
+
+    <script src="/js/csrf.js"></script>
+    <script>
+      document.querySelectorAll('.btn-desactivar-oferta').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+              if (!confirm('¿Seguro que deseas desactivar esta oferta? Ya no será visible para el público.')) return;
+              try {
+                  const response = await apiFetch(`/panel/ofertas/toggle/${btn.dataset.id}`, { method: 'POST' });
+                  if (response.ok || response.redirected) window.location.reload();
+                  else alert('No se pudo actualizar la oferta.');
+              } catch (e) {
+                  alert('Error de red conectando con el servidor.');
+              }
+          });
+      });
+    </script>
 </body>
 </html>

@@ -2,7 +2,7 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/adminController');
-const verificarSesion = require('../middlewares/auth');
+const { verificarSesion } = require('../middlewares/auth');
 
 // 1. APLICAMOS EL GUARDIA A TODAS LAS RUTAS DE ESTE ARCHIVO
 router.use(verificarSesion);
@@ -11,13 +11,14 @@ router.use(verificarSesion);
 router.get('/panel', adminController.mostrarPanel);
 
 // --- OFERTAS ---
+// Los cambios de estado son POST: las mutaciones por GET son un hueco CSRF.
 router.get('/panel/nueva-oferta', adminController.mostrarNuevaOferta);
 router.post('/panel/nueva-oferta', adminController.procesarNuevaOferta);
 router.get('/panel/ofertas', adminController.mostrarOfertas);
-router.get('/panel/ofertas/toggle/:id', adminController.toggleEstatusOferta);
+router.post('/panel/ofertas/toggle/:id', adminController.toggleEstatusOferta);
 router.get('/panel/ofertas/editar/:id', adminController.mostrarEditarOferta);
 router.post('/panel/ofertas/editar/:id', adminController.procesarEditarOferta);
-router.get('/panel/ofertas/toggle-cupos/:id', adminController.toggleBloqueoCupos);
+router.post('/panel/ofertas/toggle-cupos/:id', adminController.toggleBloqueoCupos);
 
 // --- PARTICIPANTES Y PAGOS ---
 router.get('/panel/participantes', adminController.mostrarParticipantes);

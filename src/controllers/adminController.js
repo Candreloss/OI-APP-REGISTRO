@@ -4,34 +4,52 @@ const transporter = require('../utils/mailer');
 
 // IMPORTAMOS NUESTRO NUEVO MODELO
 const AdminModel = require('../models/adminModel');
+const {
+    validar,
+    adminLoginSchema,
+    ofertaSchema,
+    editarParticipanteSchema,
+    contactoEmpresaSchema
+} = require('../utils/validators');
 
 const adminController = {};
 
 // --- VISTA DE LOGIN ---
 adminController.mostrarLogin = (req, res) => res.render('admin/adminlogin', { title: 'Admin Login' });
 
-// --- PROCESAR LOGIN (Refactorizado con Modelo) ---
+// --- PROCESAR LOGIN ---
 adminController.procesarLogin = async (req, res) => {
-    const { username, password } = req.body;
-    if (!username || !password) return res.send('<script>alert("Por favor ingresa usuario y contraseña"); window.history.back();</script>');
+    const resultado = validar(adminLoginSchema, req.body);
+    if (!resultado.ok) {
+        return res.status(400).json({ success: false, message: 'Usuario o contraseña inválidos.' });
+    }
+    const { username, password } = resultado.datos;
 
     try {
         const resultados = await AdminModel.buscarPorUsuario(username);
-        if (resultados.length === 0) return res.send('<script>alert("Credenciales inválidas"); window.history.back();</script>');
+
+        if (resultados.length === 0) {
+            // Mensaje idéntico para usuario inexistente y contraseña errónea.
+            return res.status(401).json({ success: false, message: 'Credenciales inválidas' });
+        }
 
         const admin = resultados[0];
         const contrasenaValida = await bcrypt.compare(password, admin.contrasena);
 
         if (contrasenaValida) {
+            // Regeneración de sesión contra fixation.
+            await new Promise((resolve, reject) => {
+                req.session.regenerate((err) => (err ? reject(err) : resolve()));
+            });
             req.session.admin = { id: admin.id_admin, username: admin.nombreUsuario };
             console.log(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - LOGIN EXITOSO | Admin: ${username}`);
-            res.redirect('/panel'); 
-        } else {
-            res.send('<script>alert("Credenciales inválidas"); window.history.back();</script>');
+            return res.json({ success: true, redirectUrl: '/panel' });
         }
+
+        res.status(401).json({ success: false, message: 'Credenciales inválidas' });
     } catch (error) {
         console.error("Error en el login:", error);
-        res.status(500).send('Error interno');
+        res.status(500).json({ success: false, message: 'Error interno' });
     }
 };
 
@@ -83,21 +101,18 @@ adminController.mostrarNuevaOferta = async (req, res) => {
 };
 
 adminController.procesarNuevaOferta = async (req, res) => {
-    const { capofcapcodigo, fecha_inicio, fecha_fin, cupos } = req.body;
-    
-    if (!capofcapcodigo || !fecha_inicio || !fecha_fin || !cupos) {
-        return res.status(400).json({ success: false, message: 'Todos los campos son obligatorios.' });
+    const resultado = validar(ofertaSchema, req.body);
+    if (!resultado.ok) {
+        return res.status(400).json({ success: false, message: resultado.mensaje });
     }
-    if (new Date(fecha_inicio) > new Date(fecha_fin)) {
-        return res.status(400).json({ success: false, message: 'Error: La fecha de inicio no puede ser posterior a la de fin.' });
-    }
+    const { capofcapcodigo, fecha_inicio, fecha_fin, cupos } = resultado.datos;
 
     try {
         await AdminModel.crearOferta(capofcapcodigo, fecha_inicio, fecha_fin, cupos);
         console.log(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - CREACIÓN DE OFERTA | Admin: ${req.session.admin.username} | CapID: ${capofcapcodigo}`);
-        
+
         res.json({ success: true, message: '¡Oferta publicada con éxito!' });
-    } catch (error) { 
+    } catch (error) {
         console.error("Error creando oferta:", error);
         res.status(500).json({ success: false, message: 'Error interno guardando la oferta.' });
     }
@@ -145,21 +160,19 @@ adminController.mostrarEditarOferta = async (req, res) => {
 
 adminController.procesarEditarOferta = async (req, res) => {
     const id = parseInt(req.params.id, 10);
-    const { capofcapcodigo, fecha_inicio, fecha_fin, cupos } = req.body;
 
-    if (isNaN(id) || !capofcapcodigo || !fecha_inicio || !fecha_fin || !cupos) {
-        return res.status(400).json({ success: false, message: 'Datos inválidos o incompletos.' });
+    const resultado = validar(ofertaSchema, req.body);
+    if (isNaN(id) || !resultado.ok) {
+        return res.status(400).json({ success: false, message: resultado.ok ? 'ID inválido.' : resultado.mensaje });
     }
-    if (new Date(fecha_inicio) > new Date(fecha_fin)) {
-        return res.status(400).json({ success: false, message: 'Error: La fecha de inicio no puede ser posterior a la de fin.' });
-    }
+    const { capofcapcodigo, fecha_inicio, fecha_fin, cupos } = resultado.datos;
 
     try {
         await AdminModel.actualizarOferta(id, capofcapcodigo, fecha_inicio, fecha_fin, cupos);
         console.log(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - OFERTA EDITADA  | Admin: ${req.session.admin.username} | Oferta ID: ${id}`);
-        
+
         res.json({ success: true, message: '¡Oferta actualizada con éxito!' });
-    } catch (error) { 
+    } catch (error) {
         console.error("Error editando oferta:", error);
         res.status(500).json({ success: false, message: 'Error interno actualizando la oferta.' });
     }
@@ -171,7 +184,6 @@ adminController.aprobarPago = async (req, res) => {
         const datos = await AdminModel.obtenerDatosInscripcionCorreo(inscodigo);
         if (datos) {
             await transporter.sendMail({
-                from: '"Organización Inteligente" <' + process.env.EMAIL_USER + '>',
                 to: datos.peremail,
                 subject: '✅ ¡Pago Verificado! - Organización Inteligente',
                 html: `<h3>¡Hola, ${datos.pernombre}!</h3>
@@ -193,7 +205,6 @@ adminController.rechazarPago = async (req, res) => {
         const datos = await AdminModel.obtenerDatosInscripcionCorreo(inscodigo);
         if (datos) {
             await transporter.sendMail({
-                from: '"Organización Inteligente" <' + process.env.EMAIL_USER + '>',
                 to: datos.peremail,
                 subject: '❌ Problema con tu pago - Organización Inteligente',
                 html: `<h3>¡Hola, ${datos.pernombre}!</h3>
@@ -207,13 +218,15 @@ adminController.rechazarPago = async (req, res) => {
 };
 
 adminController.editarParticipante = async (req, res) => {
-    const { doc, nombre, apellido, telefono } = req.body;
-    if (!doc || !nombre || !apellido) return res.status(400).json({ success: false, message: 'El nombre y apellido son obligatorios.' });
+    const resultado = validar(editarParticipanteSchema, req.body);
+    if (!resultado.ok) return res.status(400).json({ success: false, message: resultado.mensaje });
+    const { doc, nombre, apellido, telefono } = resultado.datos;
 
     try {
-        await AdminModel.actualizarPerfilParticipante(doc, nombre, apellido, telefono);
+        await AdminModel.actualizarPerfilParticipante(doc, nombre, apellido, telefono || '');
         res.json({ success: true, message: 'Datos actualizados correctamente.' });
     } catch (error) {
+        console.error('Error editando participante:', error);
         res.status(500).json({ success: false, message: 'Error interno en la base de datos.' });
     }
 };
@@ -265,7 +278,6 @@ adminController.aprobarLoteB2B = async (req, res) => {
         if (empleados && empleados.length > 0) {
             const promesasCorreos = empleados.map(emp => {
                 return transporter.sendMail({
-                    from: '"Organización Inteligente" <' + process.env.EMAIL_USER + '>',
                     to: emp.peremail,
                     subject: '✅ ¡Inscripción Corporativa Confirmada! - OI',
                     html: `<h3>¡Hola, ${emp.pernombre}!</h3>
@@ -283,7 +295,6 @@ adminController.aprobarLoteB2B = async (req, res) => {
         
         if (infoEmpresa && infoEmpresa.emp_email) {
             await transporter.sendMail({
-                from: '"Organización Inteligente" <' + process.env.EMAIL_USER + '>',
                 to: infoEmpresa.emp_email,
                 subject: '✅ ¡Pago o Abono Corporativo Aprobado con Éxito!',
                 html: `
@@ -329,7 +340,6 @@ adminController.rechazarPagoLote = async (req, res) => {
         // 3. Enviamos el correo de alerta
         if (infoEmpresa && infoEmpresa.emp_email) {
             await transporter.sendMail({
-                from: '"Organización Inteligente" <' + process.env.EMAIL_USER + '>',
                 to: infoEmpresa.emp_email,
                 subject: '⚠️ Importante: Problema con tu pago corporativo',
                 html: `
@@ -357,34 +367,42 @@ adminController.rechazarPagoLote = async (req, res) => {
 };
 
 adminController.registrarContactoEmpresa = async (req, res) => {
-    // 1. Extraemos empresa_nombre
-    const { empresa_nombre, emp_tipodoc, emp_doc, emp_nombre, emp_apellido, emp_email, emp_telefono } = req.body;
-    
-    // 2. Validamos
-    if (!empresa_nombre || !emp_tipodoc || !emp_doc || !emp_nombre || !emp_apellido || !emp_email || !emp_telefono) {
-        return res.send('<script>alert("Todos los campos son obligatorios."); window.history.back();</script>');
+    const resultado = validar(contactoEmpresaSchema, req.body);
+    if (!resultado.ok) {
+        return res.status(400).json({ success: false, message: resultado.mensaje });
     }
+    const d = resultado.datos;
 
     try {
-        // 3. Añadimos al arreglo de datos
-        const datos = [empresa_nombre, emp_tipodoc, emp_doc, emp_nombre, emp_apellido, emp_email, emp_telefono];
+        const datos = [d.empresa_nombre, d.emp_tipodoc, d.emp_doc, d.emp_nombre, d.emp_apellido, d.emp_email, d.emp_telefono];
         await AdminModel.registrarContactoEmpresa(datos);
-        console.log(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - NUEVA EMPRESA B2B | Admin: ${req.session.admin.username} | Empresa: ${empresa_nombre}`);
-        res.redirect('/panel/empresas');
+        console.log(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - NUEVA EMPRESA B2B | Admin: ${req.session.admin.username} | Empresa: ${d.empresa_nombre}`);
+        res.json({ success: true, message: 'Contacto corporativo registrado con éxito.', redirectUrl: '/panel/empresas' });
     } catch (error) {
         console.error('Error registrando empresa:', error);
-        res.send('<script>alert("Error al registrar. Es posible que el correo o documento ya estén registrados."); window.history.back();</script>');
+        const duplicado = error.code === 'ER_DUP_ENTRY';
+        res.status(duplicado ? 400 : 500).json({
+            success: false,
+            message: duplicado
+                ? 'El correo o documento de contacto ya están registrados.'
+                : 'Error interno al registrar la empresa.'
+        });
     }
 };
 
 adminController.toggleBloqueoCupos = async (req, res) => {
     const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) return res.status(400).send('ID inválido');
     try {
         const oferta = await AdminModel.obtenerOfertaPorId(id);
+        if (!oferta) return res.status(404).send('Oferta no encontrada');
         const nuevoBloqueo = oferta.cupos_bloqueados === 1 ? 0 : 1;
         await AdminModel.toggleBloqueoCupos(id, nuevoBloqueo);
         res.redirect('/panel/ofertas');
-    } catch (error) { res.status(500).send('Error interno'); }
+    } catch (error) {
+        console.error('Error en bloqueo de cupos:', error);
+        res.status(500).send('Error interno');
+    }
 };
 
 

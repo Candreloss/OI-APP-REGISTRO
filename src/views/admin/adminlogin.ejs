@@ -37,7 +37,7 @@
             <p>Ingresa tus credenciales para continuar</p>
           </div>
 
-          <form action="/login-admin" method="POST" autocomplete="off">
+          <form id="form-login-admin" autocomplete="off">
             <div class="form-group">
               <label class="label" for="username">Nombre de usuario</label>
               <div class="input-wrapper">
@@ -82,5 +82,41 @@
         </a>
       </div>
     </div>
+
+    <script src="/js/csrf.js"></script>
+    <script>
+      document.getElementById('form-login-admin').addEventListener('submit', async (evento) => {
+        evento.preventDefault();
+        const btn = evento.target.querySelector('button[type="submit"]');
+        const textoOriginal = btn.innerHTML;
+        btn.disabled = true;
+        btn.innerHTML = 'Verificando...';
+
+        try {
+          const response = await apiFetch('/login-admin', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              username: document.getElementById('username').value.trim(),
+              password: document.getElementById('password').value
+            })
+          });
+          const data = await response.json();
+
+          if (data.success && data.redirectUrl) {
+            window.location.href = data.redirectUrl;
+            return;
+          }
+          alert(data.message || 'Credenciales inválidas');
+        } catch (error) {
+          alert('Error de conexión con el servidor.');
+        } finally {
+          if (!window.location.pathname.endsWith('/panel')) {
+            btn.disabled = false;
+            btn.innerHTML = textoOriginal;
+          }
+        }
+      });
+    </script>
   </body>
 </html>

@@ -5,10 +5,13 @@ const upload = require('../middlewares/upload');
 
 const publicoController = require('../controllers/publicoController');
 const adminController = require('../controllers/adminController');
+const { apiLimiter, otpSolicitudLimiter, otpValidacionLimiter, adminLoginLimiter } = require('../middlewares/rateLimiters');
 
 // --- RUTAS DE LA API (Formularios y OTP) ---
-router.post('/api/solicitar-otp', publicoController.solicitarOTP);
-router.post('/api/validar-otp', publicoController.validarOTP);
+router.use('/api', apiLimiter);
+
+router.post('/api/solicitar-otp', otpSolicitudLimiter, publicoController.solicitarOTP);
+router.post('/api/validar-otp', otpValidacionLimiter, publicoController.validarOTP);
 router.get('/api/cursos-pendientes/:cedula', publicoController.obtenerCursosPendientes);
 router.post('/registro', publicoController.registrarParticipante);
 
@@ -18,7 +21,7 @@ router.post('/api/reportar-pago', upload.single('comprobante'), publicoControlle
 router.get('/api/ofertas-disponibles/:cedula', publicoController.obtenerOfertasDisponibles);
 router.post('/api/inscripcion-rapida', publicoController.inscripcionRapida);
 
-router.post('/api/empresa/solicitar-otp', publicoController.solicitarOTPEmpresa);
+router.post('/api/empresa/solicitar-otp', otpSolicitudLimiter, publicoController.solicitarOTPEmpresa);
 router.get('/api/empresa/ofertas', publicoController.apiOfertasActivas);
 router.post('/api/empresa/registrar-lote', publicoController.registrarLoteEmpresa);
 
@@ -35,13 +38,12 @@ router.get('/principal', (req, res) => res.redirect('/'));
 router.get('/empresas', publicoController.mostrarAccesoEmpresas);
 
 // --- RUTAS DE LOGIN ADMINISTRATIVO ---
-router.post('/login', (req, res) => res.redirect('/admin'));
 router.get('/admin', adminController.mostrarLogin);
-router.post('/login-admin', adminController.procesarLogin);
+router.post('/login-admin', adminLoginLimiter, adminController.procesarLogin);
 
 // --- RUTA PARA CERRAR SESIÓN ---
 router.get('/logout', (req, res) => {
-    req.session.destroy(() => res.redirect('/admin')); 
+    req.session.destroy(() => res.redirect('/admin'));
 });
 
 module.exports = router;

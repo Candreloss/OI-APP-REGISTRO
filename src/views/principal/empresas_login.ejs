@@ -95,7 +95,7 @@
                         </div>
                         <div class="form-group" style="grid-column: span 2;">
                             <label class="label">Teléfono Asociado al Pago</label>
-                            <input name="titular_telefono" type="text" class="input" placeholder="Ej. 04141234567" required />
+                            <input name="titular_telefono" type="tel" class="input" placeholder="Ej. 04141234567 o +58 4141234567" required />
                         </div>
                         <div class="form-group" style="grid-column: span 2;">
                             <label class="label">Capture de Transferencia</label>
@@ -162,6 +162,7 @@
         </div>
     </div>
 
+    <script src="/js/csrf.js"></script>
     <script>
         let correoEmpresa = '';
         let cedulaEmpresa = ''; 
@@ -175,7 +176,7 @@
             btn.innerText = "Enviando..."; btn.disabled = true;
 
             try {
-                const response = await fetch('/api/empresa/solicitar-otp', {
+                const response = await apiFetch('/api/empresa/solicitar-otp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ cedula, email })
@@ -206,7 +207,7 @@
             btn.innerText = "Verificando..."; btn.disabled = true;
 
             try {
-                const response = await fetch('/api/validar-otp', {
+                const response = await apiFetch('/api/validar-otp', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ email: correoEmpresa, codigo })
@@ -233,7 +234,7 @@
         async function cargarOfertasB2B() {
             const select = document.getElementById('select-capacitacion-lote');
             try {
-                const res = await fetch('/api/empresa/ofertas');
+                const res = await apiFetch('/api/empresa/ofertas');
                 const ofertas = await res.json();
                 
                 if(ofertas.length > 0) {
@@ -302,7 +303,7 @@
             btn.innerText = "Procesando Lote..."; btn.disabled = true;
 
             try {
-                const response = await fetch('/api/empresa/registrar-lote', {
+                const response = await apiFetch('/api/empresa/registrar-lote', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
@@ -335,7 +336,7 @@
             tbody.innerHTML = '<tr><td colspan="9" style="text-align:center; padding:10px;">Buscando registros previos...</td></tr>';
 
             try {
-                const response = await fetch('/api/empresa/lote-existente', {
+                const response = await apiFetch('/api/empresa/lote-existente', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ cedula_empresa: cedulaEmpresa, email_empresa: correoEmpresa, capacitacion: capacitacionId })
@@ -367,6 +368,13 @@
         }
 
         // CORRECCIÓN: La función ahora recibe codpais y tel de forma separada
+        // Escapado HTML: los valores vienen de la BD y no deben interpretarse como HTML.
+        function esc(valor) {
+            return String(valor == null ? '' : valor)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
         function agregarFilaMatriz(tipodoc='', doc='', nombre='', apellido='', codpais='+58', tel='', email='', fecha='', pais='', ciudad='', esExistente=false) {
             const tbody = document.getElementById('tabla-empleados');
             const tr = document.createElement('tr');
@@ -377,11 +385,11 @@
             tr.innerHTML = `
                 <td style="padding: 4px;"><select class="m-tipodoc input" style="padding: 5px; height: 35px; width: 55px; font-size: 0.8rem;"><option value="Ced" ${tipodoc==='Ced'?'selected':''}>V/E</option><option value="Pas" ${tipodoc==='Pas'?'selected':''}>Pas</option></select></td>
                 
-                <td style="padding: 4px;"><input type="text" class="m-doc input" value="${doc}" ${readonlyDoc} placeholder="Cédula" style="padding: 5px; height: 35px; width: 100%; min-width: 80px; font-size: 0.8rem;" required></td>
+                <td style="padding: 4px;"><input type="text" class="m-doc input" value="${esc(doc)}" ${readonlyDoc} placeholder="Cédula" style="padding: 5px; height: 35px; width: 100%; min-width: 80px; font-size: 0.8rem;" required></td>
                 
-                <td style="padding: 4px;"><input type="text" class="m-nombre input" value="${nombre}" placeholder="Nombre" style="padding: 5px; height: 35px; width: 100%; min-width: 80px; font-size: 0.8rem;" required></td>
+                <td style="padding: 4px;"><input type="text" class="m-nombre input" value="${esc(nombre)}" placeholder="Nombre" style="padding: 5px; height: 35px; width: 100%; min-width: 80px; font-size: 0.8rem;" required></td>
                 
-                <td style="padding: 4px;"><input type="text" class="m-apellido input" value="${apellido}" placeholder="Apellido" style="padding: 5px; height: 35px; width: 100%; min-width: 80px; font-size: 0.8rem;" required></td>
+                <td style="padding: 4px;"><input type="text" class="m-apellido input" value="${esc(apellido)}" placeholder="Apellido" style="padding: 5px; height: 35px; width: 100%; min-width: 80px; font-size: 0.8rem;" required></td>
                 
                 <td style="padding: 4px; display: flex; gap: 2px;">
                     <select class="m-codpais input" style="padding: 5px; height: 35px; width: 65px; font-size: 0.8rem; flex-shrink: 0;" required>
@@ -393,16 +401,16 @@
                         <option value="+1" ${codpais==='+1'?'selected':''}>+1</option>
                         <option value="+34" ${codpais==='+34'?'selected':''}>+34</option>
                     </select>
-                    <input type="tel" class="m-telefono input" value="${tel}" placeholder="4125678910" oninput="this.value = this.value.replace(/^0+/, '')" style="padding: 5px; height: 35px; width: 100%; min-width: 85px; font-size: 0.8rem;" required>
+                    <input type="tel" class="m-telefono input" value="${esc(tel)}" placeholder="4125678910" oninput="this.value = this.value.replace(/^0+/, '')" style="padding: 5px; height: 35px; width: 100%; min-width: 85px; font-size: 0.8rem;" required>
                 </td>
 
-                <td style="padding: 4px;"><input type="email" class="m-email input" value="${email}" placeholder="Correo" style="padding: 5px; height: 35px; width: 100%; min-width: 110px; font-size: 0.8rem;" required></td>
+                <td style="padding: 4px;"><input type="email" class="m-email input" value="${esc(email)}" placeholder="Correo" style="padding: 5px; height: 35px; width: 100%; min-width: 110px; font-size: 0.8rem;" required></td>
                 
-                <td style="padding: 4px;"><input type="date" class="m-fechanac input" value="${fecha}" style="padding: 5px; height: 35px; width: 100%; min-width: 105px; font-size: 0.8rem;" required></td>
+                <td style="padding: 4px;"><input type="date" class="m-fechanac input" value="${esc(fecha)}" style="padding: 5px; height: 35px; width: 100%; min-width: 105px; font-size: 0.8rem;" required></td>
                 
                 <td style="padding: 4px; display: flex; gap: 2px;">
                     <select class="m-pais input" style="padding: 5px; height: 35px; width: 55px; font-size: 0.8rem;"><option value="VE" ${pais==='VE'?'selected':''}>VE</option><option value="OT" ${pais==='OT'?'selected':''}>Otro</option></select>
-                    <input type="text" class="m-ciudad input" value="${ciudad}" placeholder="Ciudad" style="padding: 5px; height: 35px; width: 100%; min-width: 70px; font-size: 0.8rem;" required>
+                    <input type="text" class="m-ciudad input" value="${esc(ciudad)}" placeholder="Ciudad" style="padding: 5px; height: 35px; width: 100%; min-width: 70px; font-size: 0.8rem;" required>
                 </td>
                 
                 <td style="padding: 4px; text-align: center;">
@@ -415,22 +423,13 @@
         }
 
         // --- FUNCIONES AISLADAS DE PAGO B2B ---
-        function abrirReportePagoB2B() {
-            document.getElementById('step-3-matriz').style.display = 'none';
-            document.getElementById('step-pago-b2b').style.display = 'block';
-            cargarLotesPendientesSeguro();
-        }
-
-        function volverAlMenuB2B() {
-            document.getElementById('step-pago-b2b').style.display = 'none';
-            document.getElementById('step-3-matriz').style.display = 'block';
-        }
-
+        // (Nota: existían dos definiciones duplicadas de estas funciones; se
+        // conservó una sola, apuntando a la ruta corporativa correcta.)
         async function cargarLotesPendientesSeguro() {
             const select = document.getElementById('select-lotes-empresa');
             select.innerHTML = '<option>Cargando...</option>';
             try {
-                const response = await fetch('/api/empresa/lotes-pendientes', {
+                const response = await apiFetch('/api/empresa/lotes-pendientes', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ cedula: cedulaEmpresa, email: correoEmpresa })
@@ -444,34 +443,20 @@
             } catch (e) { select.innerHTML = '<option value="" disabled selected>Error de red</option>'; }
         }
 
-        async function procesarPagoB2B(event) {
-            event.preventDefault();
-            const form = document.getElementById('form-pago-b2b');
-            const formData = new FormData(form);
-            const btn = form.querySelector('button[type="submit"]');
-            
-            btn.innerText = "Enviando..."; btn.disabled = true;
-            try {
-                const response = await fetch('/api/reportar-pago', { method: 'POST', body: formData });
-                const result = await response.json();
-                alert(result.message);
-                if (result.success) {
-                    volverAlMenuB2B();
-                    form.reset();
-                }
-            } catch (error) { alert("Error de conexión al reportar."); }
-            finally { btn.innerText = "Enviar Reporte"; btn.disabled = false; }
-        }
-
         function abrirReportePagoB2B() {
             document.getElementById('step-3-matriz').style.display = 'none';
             document.getElementById('step-pago-b2b').style.display = 'block';
-            
+
             // Llenamos la identidad oculta
             document.getElementById('pago-cedula-emp').value = cedulaEmpresa;
             document.getElementById('pago-email-emp').value = correoEmpresa;
-            
+
             cargarLotesPendientesSeguro();
+        }
+
+        function volverAlMenuB2B() {
+            document.getElementById('step-pago-b2b').style.display = 'none';
+            document.getElementById('step-3-matriz').style.display = 'block';
         }
 
         async function procesarPagoB2B(event) {
@@ -479,11 +464,10 @@
             const form = document.getElementById('form-pago-b2b');
             const formData = new FormData(form);
             const btn = form.querySelector('button[type="submit"]');
-            
+
             btn.innerText = "Enviando..."; btn.disabled = true;
             try {
-                // APUNTAMOS A LA NUEVA RUTA B2B
-                const response = await fetch('/api/empresa/reportar-pago', { method: 'POST', body: formData });
+                const response = await apiFetch('/api/empresa/reportar-pago', { method: 'POST', body: formData });
                 const result = await response.json();
                 alert(result.message);
                 if (result.success) {

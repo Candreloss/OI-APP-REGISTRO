@@ -151,17 +151,30 @@
                                 <% } %>
                               </td>
                               <td class="p-4 flex justify-center gap-2">
-                                <button onclick="abrirModalEdicion('<%= ins.perdoc %>', '<%= ins.pernombre %>', '<%= ins.perapellido %>', '<%= ins.pertelefono %>')" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg" title="Editar Perfil">
+                                <%# Datos vía data-* (seguro): nunca interpolar valores en JS inline %>
+                                <button type="button" class="btn-editar p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                                        data-doc="<%= ins.perdoc %>"
+                                        data-nombre="<%= ins.pernombre %>"
+                                        data-apellido="<%= ins.perapellido %>"
+                                        data-telefono="<%= ins.pertelefono || '' %>" title="Editar Perfil">
                                   <iconify-icon icon="lucide:edit" class="text-lg"></iconify-icon>
                                 </button>
-                                
+
                                 <% if(ins.ins_estado === 'en_revision') { %>
-                                    <button onclick="abrirModalPago('<%= ins.inscodigo %>', '<%= ins.titular_nombre %> <%= ins.titular_apellido %>', '<%= ins.banco_origen %>', '<%= ins.referencia %>', '<%= ins.tlf_pago %>', '<%= ins.fecha_pago %>')" class="p-2 text-orange-600 hover:bg-orange-50 rounded-lg" title="Revisar Pago">
+                                    <button type="button" class="btn-pago p-2 text-orange-600 hover:bg-orange-50 rounded-lg"
+                                            data-inscodigo="<%= ins.inscodigo %>"
+                                            data-titular="<%= [ins.titular_nombre, ins.titular_apellido].filter(Boolean).join(' ') %>"
+                                            data-banco="<%= ins.banco_origen || '' %>"
+                                            data-referencia="<%= ins.referencia || '' %>"
+                                            data-telefono="<%= ins.tlf_pago || '' %>"
+                                            data-fecha="<%= ins.fecha_pago || '' %>" title="Revisar Pago">
                                       <iconify-icon icon="lucide:dollar-sign" class="text-lg"></iconify-icon>
                                     </button>
                                 <% } %>
-                                
-                                <button onclick="eliminarParticipante('<%= ins.inscodigo %>', '<%= ins.pernombre %> <%= ins.perapellido %>')" class="p-2 text-red-600 hover:bg-red-50 rounded-lg" title="Eliminar Cupo">
+
+                                <button type="button" class="btn-eliminar p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                                        data-inscodigo="<%= ins.inscodigo %>"
+                                        data-nombre="<%= [ins.pernombre, ins.perapellido].filter(Boolean).join(' ') %>" title="Eliminar Cupo">
                                     <iconify-icon icon="lucide:trash-2" class="text-lg"></iconify-icon>
                                 </button>
                               </td>
@@ -240,24 +253,40 @@
       </div>
     </div>
 
+    <script src="/js/csrf.js"></script>
     <script>
       let inscripcionActiva = null;
 
-      function abrirModalEdicion(cedula, nombre, apellido, telefono) { 
-        document.getElementById('edit-doc').value = cedula;
-        document.getElementById('edit-nombre').value = nombre;
-        document.getElementById('edit-apellido').value = apellido;
-        document.getElementById('edit-telefono').value = telefono;
+      // Delegación de eventos: los datos viajan por dataset, nunca se
+      // interpolan en HTML/JS, lo que elimina el vector XSS.
+      document.getElementById('tabla-inscripciones').addEventListener('click', (evento) => {
+        const btn = evento.target.closest('button');
+        if (!btn) return;
+
+        if (btn.classList.contains('btn-editar')) {
+          abrirModalEdicion(btn.dataset);
+        } else if (btn.classList.contains('btn-pago')) {
+          abrirModalPago(btn.dataset);
+        } else if (btn.classList.contains('btn-eliminar')) {
+          eliminarParticipante(btn.dataset.inscodigo, btn.dataset.nombre);
+        }
+      });
+
+      function abrirModalEdicion(datos) { 
+        document.getElementById('edit-doc').value = datos.doc;
+        document.getElementById('edit-nombre').value = datos.nombre;
+        document.getElementById('edit-apellido').value = datos.apellido;
+        document.getElementById('edit-telefono').value = datos.telefono;
         document.getElementById('modal-edicion').classList.remove('hidden'); 
       }
       
-      function abrirModalPago(inscodigo, titular, banco, referencia, telefono, fecha) { 
-        document.getElementById('ver-titular').innerText = titular;
-        document.getElementById('ver-banco').innerText = banco;
-        document.getElementById('ver-referencia').innerText = referencia;
-        document.getElementById('ver-telefono').innerText = telefono;
-        document.getElementById('ver-fecha').innerText = fecha;
-        inscripcionActiva = inscodigo; 
+      function abrirModalPago(datos) { 
+        document.getElementById('ver-titular').textContent = datos.titular;
+        document.getElementById('ver-banco').textContent = datos.banco;
+        document.getElementById('ver-referencia').textContent = datos.referencia;
+        document.getElementById('ver-telefono').textContent = datos.telefono;
+        document.getElementById('ver-fecha').textContent = datos.fecha;
+        inscripcionActiva = datos.inscodigo; 
         document.getElementById('modal-pago').classList.remove('hidden'); 
       }
       
@@ -277,7 +306,7 @@
         }
 
         try {
-            const response = await fetch('/panel/participantes/editar', {
+            const response = await apiFetch('/panel/participantes/editar', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ doc, nombre, apellido, telefono })
@@ -303,7 +332,7 @@
 
         if(confirm(confirmacion)) {
             try {
-                const response = await fetch(`/panel/pagos/${accion}/${inscripcionActiva}`, { method: 'POST' });
+                const response = await apiFetch(`/panel/pagos/${accion}/${inscripcionActiva}`, { method: 'POST' });
                 const data = await response.json();
                 if(data.success) {
                     alert(data.message);
@@ -321,7 +350,7 @@
       async function eliminarParticipante(inscodigo, nombre) {
           if (!confirm(`⚠️ ¡ATENCIÓN! ⚠️\n\n¿Estás seguro de que deseas ELIMINAR la inscripción de ${nombre}?\n\nEsta acción borrará su cupo y cualquier reporte de pago asociado de forma permanente.`)) return;
           try {
-              const response = await fetch(`/panel/participantes/eliminar/${inscodigo}`, { method: 'POST' });
+              const response = await apiFetch(`/panel/participantes/eliminar/${inscodigo}`, { method: 'POST' });
               const data = await response.json();
               if (data.success) {
                   alert(data.message);

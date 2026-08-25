@@ -76,6 +76,7 @@
         </main>
     </div>
 
+    <script src="/js/csrf.js"></script>
     <script>
         async function guardarEdicionOferta(event, id) {
             event.preventDefault();
@@ -88,7 +89,7 @@
             btn.disabled = true;
 
             try {
-                const response = await fetch(`/panel/ofertas/editar/${id}`, {
+                const response = await apiFetch(`/panel/ofertas/editar/${id}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(data)

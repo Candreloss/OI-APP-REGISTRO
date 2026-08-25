@@ -1,11 +1,44 @@
 // src/controllers/publicoController.js
-const crypto = require('crypto'); // NUEVO: Módulo de seguridad nativo
+const crypto = require('crypto');
 const transporter = require('../utils/mailer');
-
-// IMPORTAMOS NUESTRO NUEVO MODELO PÚBLICO
 const PublicoModel = require('../models/publicoModel');
+const {
+    validar,
+    otpSolicitudSchema,
+    otpValidacionSchema,
+    registroParticipanteSchema,
+    inscripcionRapidaSchema,
+    reportarPagoSchema,
+    loteEmpresaSchema,
+    loteConsultaSchema,
+    lotesPendientesSchema
+} = require('../utils/validators');
+
+// Mensaje genérico anti-enumeración: idéntico exista o no la identidad.
+const MENSAJE_OTP_GENERICO = 'Si tus datos son correctos, recibirás un código en tu correo en los próximos minutos.';
+
+const generarCodigoOTP = () => crypto.randomInt(100000, 999999).toString();
+const plantillaOTP = (titulo, color, instruccion, codigo) => `
+    <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
+        <h2 style="color: #455a9f;">${titulo}</h2>
+        <p>${instruccion}</p>
+        <h1 style="font-size: 36px; color: ${color}; letter-spacing: 5px;">${codigo}</h1>
+        <p style="color: #64748b; font-size: 12px;">Este código expirará en 15 minutos.</p>
+    </div>
+`;
 
 const controller = {};
+
+// ============================================================
+// IDENTIDAD Y OTP
+// ============================================================
+
+// Guardia interna: exige identidad ya validada por OTP.
+const exigirIdentidad = (req, res, tipoEsperado) => {
+    const identidad = req.session && req.session.identidad;
+    if (!identidad || identidad.tipo !== tipoEsperado) return null;
+    return identidad;
+};
 
 // 1. Mostrar la página y las ofertas
 controller.mostrarPrincipal = async (req, res) => {
@@ -18,33 +51,21 @@ controller.mostrarPrincipal = async (req, res) => {
     }
 };
 
-// 2. LÓGICA MAESTRA DE REGISTRO (Modernizada con JSON)
+// 2. LÓGICA MAESTRA DE REGISTRO
 controller.registrarParticipante = async (req, res) => {
-    const { tipodoc, doc, nombre, apellido, codpais, telefono, email, pais, ciudad, capacitacion, fechanac } = req.body;
-
-    if (!tipodoc || !doc || !nombre || !apellido || !codpais || !telefono || !email || !pais || !ciudad || !capacitacion || !fechanac) {
-        return res.status(400).json({ success: false, message: 'Todos los datos son obligatorios.' });
+    const resultado = validar(registroParticipanteSchema, req.body);
+    if (!resultado.ok) {
+        return res.status(400).json({ success: false, message: resultado.mensaje });
     }
+    const d = resultado.datos;
 
-    if (tipodoc === 'Ced' && !/^\d{6,9}$/.test(doc)) {
-        return res.status(400).json({ success: false, message: 'Para Cédula, el documento debe tener entre 6 y 9 números.' });
-    } else if (tipodoc !== 'Ced' && !/^[a-zA-Z0-9]{6,20}$/.test(doc)) {
-        return res.status(400).json({ success: false, message: 'Documento inválido para Pasaporte/Otro.' });
-    }
-
-    if (!/^\+\d{1,4}$/.test(codpais)) return res.status(400).json({ success: false, message: 'Código de país inválido.' });
-    if (!/^\d{7,15}$/.test(telefono)) return res.status(400).json({ success: false, message: 'Teléfono inválido.' });
-
-    const nombreF = nombre.charAt(0).toUpperCase() + nombre.slice(1).toLowerCase();
-    const apellidoF = apellido.charAt(0).toUpperCase() + apellido.slice(1).toLowerCase();
-    const telefonoCompleto = `${codpais} ${telefono}`;
-    const datosPersona = [tipodoc, doc, nombreF, apellidoF, fechanac, telefonoCompleto, email, pais, ciudad];
+    const nombreF = d.nombre.charAt(0).toUpperCase() + d.nombre.slice(1).toLowerCase();
+    const apellidoF = d.apellido.charAt(0).toUpperCase() + d.apellido.slice(1).toLowerCase();
+    const telefonoCompleto = `${d.codpais} ${d.telefono}`;
+    const datosPersona = [d.tipodoc, d.doc, nombreF, apellidoF, d.fechanac, telefonoCompleto, d.email, d.pais, d.ciudad];
 
     try {
-        await PublicoModel.registrarUsuarioEInscripcion(datosPersona, capacitacion);
-        const ipParticipante = req.headers['x-forwarded-for'] || req.socket.remoteAddress;
-        console.log(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - NUEVO REGISTRO | Doc: ${doc} | Oferta: ${capacitacion} | IP: ${ipParticipante}`);
-        
+        await PublicoModel.registrarUsuarioEInscripcion(datosPersona, d.capacitacion);
         res.json({ success: true, message: '¡Inscripción completada con éxito! Nos pondremos en contacto contigo.' });
     } catch (errorObj) {
         if (errorObj.tipo === 'validacion') {
@@ -58,50 +79,50 @@ controller.registrarParticipante = async (req, res) => {
     }
 };
 
-// 3. Solicitar Código OTP
+// 3. Solicitar Código OTP (público/participantes)
 controller.solicitarOTP = async (req, res) => {
-    const { cedula, email } = req.body;
-    if (!cedula || !email) return res.status(400).json({ success: false, message: 'Cédula y correo son obligatorios' });
-
-    const codigoOTP = crypto.randomInt(100000, 999999).toString();
-    const expiraEn = new Date(Date.now() + 15 * 60000); 
+    const resultado = validar(otpSolicitudSchema, req.body);
+    if (!resultado.ok) {
+        // Respuesta genérica también para inputs inválidos: no filtramos nada.
+        return res.json({ success: true, message: MENSAJE_OTP_GENERICO });
+    }
+    const { cedula, email } = resultado.datos;
 
     try {
-        // Ejecutamos la limpieza y guardado en la base de datos de forma limpia
+        const identidad = await PublicoModel.verificarIdentidadParaOTP(cedula, email);
+
+        // Solo participantes usan este flujo; empresas tienen su portal propio.
+        if (!identidad || identidad.tipo !== 'participante') {
+            return res.json({ success: true, message: MENSAJE_OTP_GENERICO });
+        }
+
+        const codigoOTP = generarCodigoOTP();
+        const expiraEn = new Date(Date.now() + 15 * 60000);
+
         await PublicoModel.limpiarTokensAntiguos(email);
         await PublicoModel.guardarTokenOTP(email, codigoOTP, expiraEn);
+        req.session.otpPendiente = { cedula, email, tipo: 'participante' };
 
         await transporter.sendMail({
-            from: '"Organización Inteligente" <' + process.env.EMAIL_USER + '>',
             to: email,
             subject: 'Tu código de acceso - Organización Inteligente',
-            html: `
-                <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-                    <h2 style="color: #455a9f;">Código de Verificación</h2>
-                    <p>Usa el siguiente código para continuar con tu proceso:</p>
-                    <h1 style="font-size: 36px; color: #ff5500; letter-spacing: 5px;">${codigoOTP}</h1>
-                    <p style="color: #64748b; font-size: 12px;">Este código expirará en 15 minutos.</p>
-                </div>
-            `
+            html: plantillaOTP('Código de Verificación', '#ff5500', 'Usa el siguiente código para continuar con tu proceso:', codigoOTP)
         });
 
-        // Verificamos si es un usuario nuevo para bifurcar el frontend
-        const resultados = await PublicoModel.verificarUsuarioExistente(cedula);
-        const esNuevo = resultados.length === 0;
-        const nombreUsuario = esNuevo ? null : `${resultados[0].pernombre} ${resultados[0].perapellido}`;
-
-        res.json({ success: true, message: 'Código enviado con éxito', esNuevo, nombre: nombreUsuario });
-
+        res.json({ success: true, message: MENSAJE_OTP_GENERICO });
     } catch (error) {
         console.error('Error enviando correo OTP:', error);
-        res.status(500).json({ success: false, message: 'Error al enviar el correo o generar token' });
+        res.status(500).json({ success: false, message: 'Error al procesar la solicitud. Intenta de nuevo.' });
     }
 };
 
-// 4. Validar Código OTP
+// 4. Validar Código OTP (común para participantes y empresas)
 controller.validarOTP = async (req, res) => {
-    const { email, codigo } = req.body;
-    if (!email || !codigo) return res.status(400).json({ success: false, message: 'Correo y código son obligatorios' });
+    const resultado = validar(otpValidacionSchema, req.body);
+    if (!resultado.ok) {
+        return res.status(400).json({ success: false, message: resultado.mensaje });
+    }
+    const { email, codigo } = resultado.datos;
 
     try {
         const resultados = await PublicoModel.buscarTokenOTP(email, codigo);
@@ -109,22 +130,53 @@ controller.validarOTP = async (req, res) => {
 
         const token = resultados[0];
         if (token.usado === 1) return res.json({ success: false, message: 'Este código ya fue utilizado' });
-        if (new Date() > new Date(token.expira_en)) return res.json({ success: false, message: 'El código ha expirado. Solicita uno nuevo.' });
+        if (new Date() > new Date(token.expira_en)) {
+            return res.json({ success: false, message: 'El código ha expirado. Solicita uno nuevo.' });
+        }
+
+        const pendiente = req.session.otpPendiente;
+        if (!pendiente || pendiente.email !== email || pendiente.cedula == null) {
+            return res.status(401).json({ success: false, message: 'Solicitud inválida. Pide un código nuevamente.' });
+        }
 
         await PublicoModel.marcarTokenUsado(token.id_otp);
-        req.session.usuarioValidado = email;
-        res.json({ success: true, message: 'Código validado correctamente' });
 
+        // Datos para bifurcar el frontend (post-autenticación: ya no filtra nada)
+        let esNuevo = true;
+        let nombreUsuario = null;
+        if (pendiente.tipo === 'participante') {
+            const filas = await PublicoModel.verificarUsuarioExistente(pendiente.cedula);
+            esNuevo = filas.length === 0;
+            nombreUsuario = esNuevo ? null : `${filas[0].pernombre} ${filas[0].perapellido}`.trim();
+        }
+
+        // Regeneración de sesión contra fixation: se preserva solo la identidad nueva.
+        await new Promise((resolve, reject) => {
+            req.session.regenerate((err) => (err ? reject(err) : resolve()));
+        });
+        req.session.identidad = { cedula: pendiente.cedula, email: pendiente.email, tipo: pendiente.tipo };
+
+        res.json({ success: true, message: 'Código validado correctamente', esNuevo, nombre: nombreUsuario });
     } catch (error) {
         console.error("Error validando OTP:", error);
         res.status(500).json({ success: false, message: 'Error en el servidor' });
     }
 };
 
-// 5. Obtener cursos pendientes del usuario
+// ============================================================
+// PANEL DEL PARTICIPANTE (protegido contra IDOR)
+// ============================================================
+
+// 5. Cursos pendientes del participante autenticado
 controller.obtenerCursosPendientes = async (req, res) => {
+    const identidad = exigirIdentidad(req, res, 'participante');
+    if (!identidad) return res.status(401).json({ success: false, message: 'Acceso no autorizado. Valida tu identidad.' });
+    if (String(req.params.cedula) !== String(identidad.cedula)) {
+        return res.status(403).json({ success: false, message: 'No puedes consultar datos de otro participante.' });
+    }
+
     try {
-        const resultados = await PublicoModel.obtenerCursosPendientes(req.params.cedula);
+        const resultados = await PublicoModel.obtenerCursosPendientes(identidad.cedula);
         res.json(resultados);
     } catch (error) {
         console.error('Error buscando cursos pendientes:', error);
@@ -132,49 +184,65 @@ controller.obtenerCursosPendientes = async (req, res) => {
     }
 };
 
-// 6. Procesar reporte de pago (Modernizado con JSON)
+// 6. Reporte de pago individual (con verificación de propiedad)
 controller.reportarPago = async (req, res) => {
-    const { curso_pagado, titular_nombre, titular_apellido, banco_origen, referencia, titular_telefono } = req.body;
+    const identidad = exigirIdentidad(req, res, 'participante');
+    if (!identidad) return res.status(401).json({ success: false, message: 'Acceso no autorizado. Valida tu identidad.' });
+
+    const resultado = validar(reportarPagoSchema, req.body);
+    if (!resultado.ok) return res.status(400).json({ success: false, message: resultado.mensaje });
+    const d = resultado.datos;
+
     const comprobante = req.file;
-
-    if (!curso_pagado || !titular_nombre || !referencia || !comprobante) {
-        return res.status(400).json({ success: false, message: 'Faltan datos obligatorios o no adjuntaste el capture.' });
-    }
-
-    const datosPago = [curso_pagado, titular_nombre, titular_apellido, titular_telefono, banco_origen, referencia];
+    if (!comprobante) return res.status(400).json({ success: false, message: 'Debes adjuntar el capture de la transferencia.' });
 
     try {
-        await PublicoModel.registrarPagoYActualizar(datosPago, curso_pagado);
+        // ANTI-IDOR: la inscripción debe pertenecer al participante de la sesión.
+        const inscripcion = await PublicoModel.obtenerInscripcionDeUsuario(d.curso_pagado, identidad.cedula);
+        if (!inscripcion) {
+            return res.status(403).json({ success: false, message: 'Esa inscripción no existe o no te pertenece.' });
+        }
+        if (!['pendiente', 'rechazado'].includes(inscripcion.ins_estado)) {
+            return res.status(400).json({ success: false, message: 'Esta inscripción ya tiene un pago en revisión o conciliado.' });
+        }
+
+        const datosPago = [d.curso_pagado, d.titular_nombre, d.titular_apellido, d.titular_telefono, d.banco_origen, d.referencia];
+        await PublicoModel.registrarPagoYActualizar(datosPago, d.curso_pagado);
 
         await transporter.sendMail({
-            from: '"Sistema de Pagos OI" <' + process.env.EMAIL_USER + '>',
             to: process.env.ADMIN_EMAIL,
-            subject: `💰 Nuevo Pago Reportado: ${titular_nombre} ${titular_apellido} - Ref: ${referencia}`,
+            subject: `💰 Nuevo Pago Reportado: ${d.titular_nombre} ${d.titular_apellido} - Ref: ${d.referencia}`,
             html: `
                 <h3>Detalles del Nuevo Pago Reportado</h3>
                 <ul>
-                    <li><b>Inscripción N°:</b> ${curso_pagado}</li>
-                    <li><b>Titular:</b> ${titular_nombre} ${titular_apellido}</li>
-                    <li><b>Teléfono:</b> ${titular_telefono}</li>
-                    <li><b>Banco:</b> ${banco_origen}</li>
-                    <li><b>Referencia:</b> ${referencia}</li>
+                    <li><b>Inscripción N°:</b> ${d.curso_pagado}</li>
+                    <li><b>Titular:</b> ${d.titular_nombre} ${d.titular_apellido}</li>
+                    <li><b>Teléfono:</b> ${d.titular_telefono}</li>
+                    <li><b>Banco:</b> ${d.banco_origen}</li>
+                    <li><b>Referencia:</b> ${d.referencia}</li>
                 </ul>
                 <p>El comprobante ha sido adjuntado.</p>
             `,
-            attachments: [{ filename: `comprobante_${referencia}.jpg`, content: comprobante.buffer }]
+            attachments: [{ filename: `comprobante_${d.referencia}.jpg`, content: comprobante.buffer }]
         });
 
         res.json({ success: true, message: '¡Pago y capture reportados con éxito! El administrador lo revisará pronto.' });
     } catch (error) {
         console.error('Error registrando pago:', error);
-        res.status(500).json({ success: false, message: 'Tu pago se guardó, pero hubo un error con la imagen. Contáctanos.' });
+        res.status(500).json({ success: false, message: 'Hubo un problema procesando tu reporte. Si persiste, contáctanos.' });
     }
 };
 
-// 7. Obtener ofertas en las que NO está inscrito
+// 7. Ofertas en las que NO está inscrito (protegido)
 controller.obtenerOfertasDisponibles = async (req, res) => {
+    const identidad = exigirIdentidad(req, res, 'participante');
+    if (!identidad) return res.status(401).json({ success: false, message: 'Acceso no autorizado. Valida tu identidad.' });
+    if (String(req.params.cedula) !== String(identidad.cedula)) {
+        return res.status(403).json({ success: false, message: 'No puedes consultar datos de otro participante.' });
+    }
+
     try {
-        const resultados = await PublicoModel.obtenerOfertasDisponibles(req.params.cedula);
+        const resultados = await PublicoModel.obtenerOfertasDisponibles(identidad.cedula);
         res.json(resultados);
     } catch (error) {
         console.error('Error buscando ofertas disponibles:', error);
@@ -182,20 +250,26 @@ controller.obtenerOfertasDisponibles = async (req, res) => {
     }
 };
 
-// 8. Inscripción Rápida (Usuarios Existentes)
+// 8. Inscripción Rápida (solo el propio participante autenticado)
 controller.inscripcionRapida = async (req, res) => {
-    const { cedula, capacitacion } = req.body;
-    if (!cedula || !capacitacion) return res.status(400).json({ success: false, message: 'Faltan datos para la inscripción.' });
+    const identidad = exigirIdentidad(req, res, 'participante');
+    if (!identidad) return res.status(401).json({ success: false, message: 'Acceso no autorizado. Valida tu identidad.' });
+
+    const resultado = validar(inscripcionRapidaSchema, req.body);
+    if (!resultado.ok) return res.status(400).json({ success: false, message: resultado.mensaje });
+    const { capacitacion } = resultado.datos;
+
+    if (String(resultado.datos.cedula) !== String(identidad.cedula)) {
+        return res.status(403).json({ success: false, message: 'No puedes inscribir a otra persona.' });
+    }
 
     try {
-        await PublicoModel.inscripcionRapida(cedula, capacitacion);
+        await PublicoModel.inscripcionRapida(identidad.cedula, capacitacion);
         res.json({ success: true, message: '¡Inscripción completada con éxito! Ya puedes reportar tu pago.' });
     } catch (errorObj) {
-        // CORREGIDO: Usamos res.json en lugar de res.send(<script>)
         if (errorObj.tipo === 'validacion') {
             return res.status(400).json({ success: false, message: errorObj.message });
         }
-
         if (errorObj.code === 'ER_DUP_ENTRY') {
             return res.status(400).json({ success: false, message: 'Ya estás inscrito en esta capacitación.' });
         }
@@ -204,94 +278,88 @@ controller.inscripcionRapida = async (req, res) => {
     }
 };
 
-// --- MÓDULO B2B (EMPRESAS) ---
+// ============================================================
+// MÓDULO B2B (EMPRESAS)
+// ============================================================
 
 // Mostrar la vista de acceso corporativo
 controller.mostrarAccesoEmpresas = (req, res) => {
     res.render('principal/empresas_login', { title: 'Acceso Corporativo - OI' });
 };
 
-// Solicitar OTP Exclusivo para Empresas
+// Solicitar OTP exclusivo para contactos de empresa
 controller.solicitarOTPEmpresa = async (req, res) => {
-    const { cedula, email } = req.body;
-    if (!cedula || !email) return res.status(400).json({ success: false, message: 'Cédula y correo son obligatorios' });
+    const resultado = validar(otpSolicitudSchema, req.body);
+    if (!resultado.ok) {
+        return res.json({ success: true, message: MENSAJE_OTP_GENERICO });
+    }
+    const { cedula, email } = resultado.datos;
 
     try {
-        // 1. Verificamos que sea un contacto autorizado
-        const resultados = await PublicoModel.verificarContactoEmpresa(cedula, email);
-        if (resultados.length === 0) {
-            return res.json({ success: false, message: 'Acceso denegado: No estás registrado como contacto corporativo.' });
+        const identidad = await PublicoModel.verificarIdentidadParaOTP(cedula, email);
+
+        // Solo contactos corporativos reciben código aquí (anti-sondeo).
+        if (!identidad || identidad.tipo !== 'empresa') {
+            return res.json({ success: true, message: MENSAJE_OTP_GENERICO });
         }
 
-        // 2. Generamos el OTP
-        const codigoOTP = crypto.randomInt(100000, 999999).toString();
-        const expiraEn = new Date(Date.now() + 15 * 60000); 
+        const codigoOTP = generarCodigoOTP();
+        const expiraEn = new Date(Date.now() + 15 * 60000);
 
-        // 3. Guardamos el Token (Reutilizando la lógica que ya tenías)
         await PublicoModel.limpiarTokensAntiguos(email);
         await PublicoModel.guardarTokenOTP(email, codigoOTP, expiraEn);
+        req.session.otpPendiente = { cedula, email, tipo: 'empresa' };
 
-        // 4. Enviamos el correo
         await transporter.sendMail({
-            from: '"Organización Inteligente Corporativo" <' + process.env.EMAIL_USER + '>',
             to: email,
             subject: 'Tu código de acceso Corporativo - OI',
-            html: `
-                <div style="font-family: Arial, sans-serif; text-align: center; padding: 20px;">
-                    <h2 style="color: #455a9f;">Acceso B2B Empresas</h2>
-                    <p>Usa el siguiente código para ingresar al portal de multi-inscripciones:</p>
-                    <h1 style="font-size: 36px; color: #10b981; letter-spacing: 5px;">${codigoOTP}</h1>
-                    <p style="color: #64748b; font-size: 12px;">Este código expirará en 15 minutos.</p>
-                </div>
-            `
+            html: plantillaOTP('Acceso B2B Empresas', '#10b981', 'Usa el siguiente código para ingresar al portal de multi-inscripciones:', codigoOTP)
         });
 
-        res.json({ success: true, message: 'Código corporativo enviado con éxito.' });
+        res.json({ success: true, message: MENSAJE_OTP_GENERICO });
     } catch (error) {
         console.error('Error en OTP Empresa:', error);
         res.status(500).json({ success: false, message: 'Error interno al generar código.' });
     }
 };
 
-// Obtener API de Ofertas Activas para el menú desplegable corporativo
+// API pública de ofertas activas (info pública)
 controller.apiOfertasActivas = async (req, res) => {
     try {
         const ofertas = await PublicoModel.obtenerOfertasActivas();
         res.json(ofertas);
     } catch (error) {
+        console.error('Error cargando ofertas API:', error);
         res.status(500).json([]);
     }
 };
 
 // Recibir y procesar el Lote Matriz
 controller.registrarLoteEmpresa = async (req, res) => {
-    const { cedula_empresa, email_empresa, capacitacion, empleados } = req.body;
-    
-    if (req.session.usuarioValidado !== email_empresa) {
-    return res.status(401).json({ success: false, message: 'Acceso no autorizado o sesión expirada. Vuelve a validar tu OTP.' });
-    }
-    
-    if (!empleados || empleados.length === 0) {
-        return res.status(400).json({ success: false, message: 'La matriz está vacía.' });
+    const identidad = exigirIdentidad(req, res, 'empresa');
+
+    const resultado = validar(loteEmpresaSchema, req.body);
+    if (!resultado.ok) return res.status(400).json({ success: false, message: resultado.mensaje });
+    const { cedula_empresa, email_empresa, capacitacion, empleados } = resultado.datos;
+
+    if (!identidad
+        || String(identidad.cedula) !== String(cedula_empresa)
+        || identidad.email !== email_empresa) {
+        return res.status(401).json({ success: false, message: 'Acceso no autorizado o sesión expirada. Vuelve a validar tu OTP.' });
     }
 
     try {
-        // Validamos la identidad de la empresa nuevamente por seguridad
         const empresas = await PublicoModel.verificarContactoEmpresa(cedula_empresa, email_empresa);
         if (empresas.length === 0) return res.status(403).json({ success: false, message: 'Sesión corporativa inválida.' });
-        
-        const empresaId = empresas[0].id_contacto;
 
-        // Mandamos el paquete a la transacción
+        const empresaId = empresas[0].id_contacto;
         await PublicoModel.registrarLoteTransaccion(empresaId, capacitacion, empleados);
-        
+
         res.json({ success: true, message: `¡Lote de ${empleados.length} participantes registrado con éxito!` });
     } catch (errorObj) {
-        // CORREGIDO: Usamos res.json en lugar de res.send(<script>)
         if (errorObj.tipo === 'validacion') {
             return res.status(400).json({ success: false, message: errorObj.message });
         }
-        
         console.error('Error procesando lote B2B:', errorObj);
         if (errorObj.code === 'ER_DUP_ENTRY') {
             res.status(400).json({ success: false, message: 'Operación cancelada: Uno o más empleados del lote ya están inscritos en esa capacitación.' });
@@ -302,82 +370,93 @@ controller.registrarLoteEmpresa = async (req, res) => {
 };
 
 controller.obtenerLoteExistente = async (req, res) => {
-    const { cedula_empresa, email_empresa, capacitacion } = req.body;
-    
-    if (req.session.usuarioValidado !== email_empresa) {
-    return res.status(401).json({ success: false, message: 'Acceso no autorizado o sesión expirada. Vuelve a validar tu OTP.' });
+    const identidad = exigirIdentidad(req, res, 'empresa');
+
+    const resultado = validar(loteConsultaSchema, req.body);
+    if (!resultado.ok) return res.status(400).json([]);
+    const { cedula_empresa, email_empresa, capacitacion } = resultado.datos;
+
+    if (!identidad
+        || String(identidad.cedula) !== String(cedula_empresa)
+        || identidad.email !== email_empresa) {
+        return res.status(401).json([]);
     }
-    
+
     try {
         const empresas = await PublicoModel.verificarContactoEmpresa(cedula_empresa, email_empresa);
         if (empresas.length === 0) return res.json([]);
         const empleados = await PublicoModel.obtenerLoteExistente(empresas[0].id_contacto, capacitacion);
         res.json(empleados);
     } catch (error) {
-        res.json([]);
+        console.error('Error consultando lote existente:', error);
+        res.status(500).json([]);
     }
 };
 
 controller.obtenerLotesPendientesEmpresa = async (req, res) => {
-    const { cedula, email } = req.body;
-    
-    // CORREGIDO: Comparamos contra 'email' que es lo que extrajimos de req.body
-    if (req.session.usuarioValidado !== email) {
-        return res.status(401).json({ success: false, message: 'Acceso no autorizado o sesión expirada. Vuelve a validar tu OTP.' });
+    const identidad = exigirIdentidad(req, res, 'empresa');
+
+    const resultado = validar(lotesPendientesSchema, req.body);
+    if (!resultado.ok) return res.status(400).json([]);
+    const { cedula, email } = resultado.datos;
+
+    if (!identidad || String(identidad.cedula) !== String(cedula) || identidad.email !== email) {
+        return res.status(401).json([]);
     }
-    
+
     try {
         const empresas = await PublicoModel.verificarContactoEmpresa(cedula, email);
         if (empresas.length === 0) return res.status(403).json([]);
-        
         const lotes = await PublicoModel.obtenerLotesEmpresaPendientes(empresas[0].id_contacto);
         res.json(lotes);
     } catch (error) {
+        console.error('Error consultando lotes pendientes:', error);
         res.status(500).json([]);
     }
 };
 
 // Procesar Pago Corporativo (Lote completo)
 controller.reportarPagoB2B = async (req, res) => {
-    const { cedula_empresa, email_empresa, curso_pagado, titular_nombre, titular_apellido, banco_origen, referencia, titular_telefono } = req.body;
-    const comprobante = req.file;
+    const identidad = exigirIdentidad(req, res, 'empresa');
 
-    if (req.session.usuarioValidado !== email_empresa) {
+    const resultado = validar(reportarPagoSchema, req.body);
+    if (!resultado.ok) return res.status(400).json({ success: false, message: resultado.mensaje });
+    const d = resultado.datos;
+
+    const comprobante = req.file;
+    if (!comprobante) return res.status(400).json({ success: false, message: 'Debes adjuntar el capture de la transferencia.' });
+
+    // La identidad de la empresa sale de la sesión; el body ya no decide quién paga.
+    if (!identidad) {
         return res.status(401).json({ success: false, message: 'Sesión corporativa expirada.' });
     }
 
-    if (!curso_pagado || !titular_nombre || !titular_apellido || !referencia || !comprobante) {
-        return res.status(400).json({ success: false, message: 'Faltan datos obligatorios o el capture.' });
-    }
-
     try {
-        const empresas = await PublicoModel.verificarContactoEmpresa(cedula_empresa, email_empresa);
+        const empresas = await PublicoModel.verificarContactoEmpresa(identidad.cedula, identidad.email);
         if (empresas.length === 0) return res.status(403).json({ success: false, message: 'Empresa no autorizada.' });
         const empresaId = empresas[0].id_contacto;
 
-        // Buscamos a los empleados del lote
-        const pendientes = await PublicoModel.obtenerInscripcionesPendientesPorLote(empresaId, curso_pagado);
+        const pendientes = await PublicoModel.obtenerInscripcionesPendientesPorLote(empresaId, d.curso_pagado);
         if (pendientes.length === 0) {
             return res.status(400).json({ success: false, message: 'No hay empleados pendientes de pago en este lote.' });
         }
 
-        const datosPagoBase = [titular_nombre, titular_apellido, titular_telefono, banco_origen, referencia];
+        const datosPagoBase = [d.titular_nombre, d.titular_apellido, d.titular_telefono, d.banco_origen, d.referencia];
         await PublicoModel.registrarPagoB2B(pendientes, datosPagoBase, empresaId);
 
         await transporter.sendMail({
-            from: '"Sistema B2B" <' + process.env.EMAIL_USER + '>',
             to: process.env.ADMIN_EMAIL,
-            subject: `🏢 Pago o Abono Corporativo Reportado: Lote #${curso_pagado} (${pendientes.length} empleados)`,
+            subject: `🏢 Pago o Abono Corporativo Reportado: Lote #${d.curso_pagado} (${pendientes.length} empleados)`,
             html: `
                 <h3>Nuevo Pago o Abono de Lote Corporativo</h3>
                 <ul>
-                    <li><b>Empresa:</b> ${email_empresa}</li>
+                    <li><b>Empresa:</b> ${identidad.email}</li>
                     <li><b>Cantidad de Empleados contemplados:</b> ${pendientes.length}</li>
-                    <li><b>Titular:</b> ${titular_nombre} ${titular_apellido}</li>
-                    <li><b>Referencia:</b> ${referencia}</li>
+                    <li><b>Titular:</b> ${d.titular_nombre} ${d.titular_apellido}</li>
+                    <li><b>Referencia:</b> ${d.referencia}</li>
                 </ul>
             `,
-            attachments: [{ filename: `comprobante_b2b_${referencia}.jpg`, content: comprobante.buffer }]
+            attachments: [{ filename: `comprobante_b2b_${d.referencia}.jpg`, content: comprobante.buffer }]
         });
 
         res.json({ success: true, message: `¡Pago reportado para los ${pendientes.length} empleados con éxito!` });
