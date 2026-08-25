@@ -1,7 +1,10 @@
 // src/middlewares/auth.js
 
 // Guardia del panel administrativo: exige sesión de admin activa.
+// Solo actúa sobre rutas /panel: las demás peticiones continúan hacia el
+// siguiente handler (así un GET desconocido cae en el 404 y no en el login).
 const verificarSesion = (req, res, next) => {
+    if (!req.path.startsWith('/panel')) return next();
     if (req.session && req.session.admin) {
         return next();
     }

@@ -1,5 +1,6 @@
 // src/controllers/adminController.js
 const bcrypt = require('bcryptjs');
+const logger = require('../utils/logger');
 const transporter = require('../utils/mailer');
 
 // IMPORTAMOS NUESTRO NUEVO MODELO
@@ -42,13 +43,13 @@ adminController.procesarLogin = async (req, res) => {
                 req.session.regenerate((err) => (err ? reject(err) : resolve()));
             });
             req.session.admin = { id: admin.id_admin, username: admin.nombreUsuario };
-            console.log(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - LOGIN EXITOSO | Admin: ${username}`);
+            logger.info(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - LOGIN EXITOSO | Admin: ${username}`);
             return res.json({ success: true, redirectUrl: '/panel' });
         }
 
         res.status(401).json({ success: false, message: 'Credenciales inválidas' });
     } catch (error) {
-        console.error("Error en el login:", error);
+        logger.error("Error en el login:", error);
         res.status(500).json({ success: false, message: 'Error interno' });
     }
 };
@@ -69,7 +70,7 @@ adminController.mostrarPanel = async (req, res) => {
             ofertas 
         });
     } catch (error) {
-        console.error("Error cargando el dashboard:", error);
+        logger.error("Error cargando el dashboard:", error);
         res.status(500).send('Error interno');
     }
 };
@@ -84,7 +85,7 @@ adminController.mostrarParticipantes = async (req, res) => {
             inscripciones 
         });
     } catch (error) {
-        console.error('Error cargando participantes:', error);
+        logger.error('Error cargando participantes:', error);
         res.render('admin/participantes', { title: 'Participantes y Pagos', admin: req.session.admin, inscripciones: [] });
     }
 };
@@ -109,11 +110,11 @@ adminController.procesarNuevaOferta = async (req, res) => {
 
     try {
         await AdminModel.crearOferta(capofcapcodigo, fecha_inicio, fecha_fin, cupos);
-        console.log(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - CREACIÓN DE OFERTA | Admin: ${req.session.admin.username} | CapID: ${capofcapcodigo}`);
+        logger.info(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - CREACIÓN DE OFERTA | Admin: ${req.session.admin.username} | CapID: ${capofcapcodigo}`);
 
         res.json({ success: true, message: '¡Oferta publicada con éxito!' });
     } catch (error) {
-        console.error("Error creando oferta:", error);
+        logger.error("Error creando oferta:", error);
         res.status(500).json({ success: false, message: 'Error interno guardando la oferta.' });
     }
 };
@@ -137,7 +138,7 @@ adminController.toggleEstatusOferta = async (req, res) => {
         await AdminModel.actualizarEstatusOferta(id, nuevoEstatus);
         
         const accion = nuevoEstatus === 0 ? 'DESACTIVÓ 🔴' : 'ACTIVÓ 🟢';
-        console.log(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - ESTATUS MODIFICADO | Admin: ${req.session.admin.username} | ${accion} Oferta ID: ${id}`);
+        logger.info(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - ESTATUS MODIFICADO | Admin: ${req.session.admin.username} | ${accion} Oferta ID: ${id}`);
         
         const urlAnterior = req.get('Referer');
         if (urlAnterior && urlAnterior.includes('/panel/ofertas')) res.redirect('/panel/ofertas'); 
@@ -169,11 +170,11 @@ adminController.procesarEditarOferta = async (req, res) => {
 
     try {
         await AdminModel.actualizarOferta(id, capofcapcodigo, fecha_inicio, fecha_fin, cupos);
-        console.log(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - OFERTA EDITADA  | Admin: ${req.session.admin.username} | Oferta ID: ${id}`);
+        logger.info(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - OFERTA EDITADA  | Admin: ${req.session.admin.username} | Oferta ID: ${id}`);
 
         res.json({ success: true, message: '¡Oferta actualizada con éxito!' });
     } catch (error) {
-        console.error("Error editando oferta:", error);
+        logger.error("Error editando oferta:", error);
         res.status(500).json({ success: false, message: 'Error interno actualizando la oferta.' });
     }
 };
@@ -193,7 +194,7 @@ adminController.aprobarPago = async (req, res) => {
                         <p>Nos complace informarte que hemos verificado tu pago exitosamente.</p>
                         <p>Tu inscripción en <b>${datos.capnombre}</b> está 100% confirmada.</p>
                         <p>Pronto recibirás más detalles sobre el inicio de clases.</p>`
-            }).catch(err => console.error('Error enviando correo de aprobación:', err.message));
+            }).catch(err => logger.error('Error enviando correo de aprobación:', err.message));
         }
         res.json({ success: true, message: 'Pago conciliado.' });
     } catch (err) {
@@ -217,7 +218,7 @@ adminController.rechazarPago = async (req, res) => {
                         <p>Hemos revisado tu reporte de pago para <b>${datos.capnombre}</b> pero no pudimos verificar la transferencia en nuestras cuentas.</p>
                         <p>Tu inscripción sigue reservada, pero ha vuelto a estado <b>Pendiente</b>.</p>
                         <p>Por favor, ingresa nuevamente al sistema y reporta los datos correctos del pago.</p>`
-            }).catch(err => console.error('Error enviando correo de rechazo:', err.message));
+            }).catch(err => logger.error('Error enviando correo de rechazo:', err.message));
         }
         res.json({ success: true, message: 'Reporte eliminado.' });
     } catch (err) {
@@ -235,7 +236,7 @@ adminController.editarParticipante = async (req, res) => {
         await AdminModel.actualizarPerfilParticipante(doc, nombre, apellido, telefono || '');
         res.json({ success: true, message: 'Datos actualizados correctamente.' });
     } catch (error) {
-        console.error('Error editando participante:', error);
+        logger.error('Error editando participante:', error);
         res.status(500).json({ success: false, message: 'Error interno en la base de datos.' });
     }
 };
@@ -244,10 +245,10 @@ adminController.eliminarInscripcion = async (req, res) => {
     const inscodigo = req.params.id;
     try {
         await AdminModel.eliminarInscripcionCompleta(inscodigo);
-        console.log(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - PARTICIPANTE ELIMINADO | Admin: ${req.session.admin.username} | Inscripción: ${inscodigo}`);
+        logger.info(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - PARTICIPANTE ELIMINADO | Admin: ${req.session.admin.username} | Inscripción: ${inscodigo}`);
         res.json({ success: true, message: 'La inscripción del participante ha sido eliminada exitosamente.' });
     } catch (error) {
-        console.error("Error al eliminar participante:", error);
+        logger.error("Error al eliminar participante:", error);
         res.status(500).json({ success: false, message: 'Error interno al intentar eliminar al participante.' });
     }
 };
@@ -265,7 +266,7 @@ adminController.mostrarEmpresas = async (req, res) => {
             lotes // <- NUEVO: Pasamos los lotes a la vista
         });
     } catch (error) {
-        console.error('Error cargando empresas:', error);
+        logger.error('Error cargando empresas:', error);
         res.status(500).send('Error interno cargando el módulo de empresas');
     }
 };
@@ -297,7 +298,7 @@ adminController.aprobarLoteB2B = async (req, res) => {
                 })
             )).then(resultados => {
                 const fallos = resultados.filter(r => r.status === 'rejected').length;
-                if (fallos > 0) console.error(`Correos de lote fallidos: ${fallos}/${resultados.length}`);
+                if (fallos > 0) logger.error(`Correos de lote fallidos: ${fallos}/${resultados.length}`);
             });
         }
 
@@ -320,16 +321,16 @@ adminController.aprobarLoteB2B = async (req, res) => {
                         <p style="font-size: 12px; color: #64748b;">Atentamente,<br>El equipo de Organización Inteligente.</p>
                     </div>
                 `
-            }).catch(err => console.error('Error enviando correo a empresa:', err.message));
+            }).catch(err => logger.error('Error enviando correo a empresa:', err.message));
         }
         // ----------------------------------------------------------
         
-        console.log(`[AUDITORÍA] - LOTE APROBADO | Admin: ${req.session.admin.username} | Empresa ID: ${empresa_id} | Total: ${empleados.length}`);
+        logger.info(`[AUDITORÍA] - LOTE APROBADO | Admin: ${req.session.admin.username} | Empresa ID: ${empresa_id} | Total: ${empleados.length}`);
         
         
         res.json({ success: true, message: `¡Lote de ${empleados.length} participantes conciliado exitosamente!` });
     } catch (error) {
-        console.error('Error aprobando lote B2B:', error);
+        logger.error('Error aprobando lote B2B:', error);
         res.status(500).json({ success: false, message: 'Error interno al conciliar el lote.' });
     }
 };
@@ -366,14 +367,14 @@ adminController.rechazarPagoLote = async (req, res) => {
                         <p style="font-size: 12px; color: #64748b;">Atentamente,<br>El equipo de Organización Inteligente.</p>
                     </div>
                 `
-            }).catch(err => console.error('Error enviando correo de rechazo a empresa:', err.message));
+            }).catch(err => logger.error('Error enviando correo de rechazo a empresa:', err.message));
         }
 
-        console.log(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - PAGO B2B RECHAZADO | Admin: ${req.session.admin.username} | Empresa ID: ${empresa_id}`);
+        logger.info(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - PAGO B2B RECHAZADO | Admin: ${req.session.admin.username} | Empresa ID: ${empresa_id}`);
         
         res.json({ success: true, message: 'El pago del lote ha sido rechazado y se ha notificado a la empresa por correo electrónico.' });
     } catch (error) {
-        console.error("Error rechazando lote B2B:", error);
+        logger.error("Error rechazando lote B2B:", error);
         res.status(500).json({ success: false, message: 'Error interno al rechazar el lote corporativo.' });
     }
 };
@@ -388,10 +389,10 @@ adminController.registrarContactoEmpresa = async (req, res) => {
     try {
         const datos = [d.empresa_nombre, d.emp_tipodoc, d.emp_doc, d.emp_nombre, d.emp_apellido, d.emp_email, d.emp_telefono];
         await AdminModel.registrarContactoEmpresa(datos);
-        console.log(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - NUEVA EMPRESA B2B | Admin: ${req.session.admin.username} | Empresa: ${d.empresa_nombre}`);
+        logger.info(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - NUEVA EMPRESA B2B | Admin: ${req.session.admin.username} | Empresa: ${d.empresa_nombre}`);
         res.json({ success: true, message: 'Contacto corporativo registrado con éxito.', redirectUrl: '/panel/empresas' });
     } catch (error) {
-        console.error('Error registrando empresa:', error);
+        logger.error('Error registrando empresa:', error);
         const duplicado = error.code === 'ER_DUP_ENTRY';
         res.status(duplicado ? 400 : 500).json({
             success: false,
@@ -412,7 +413,7 @@ adminController.toggleBloqueoCupos = async (req, res) => {
         await AdminModel.toggleBloqueoCupos(id, nuevoBloqueo);
         res.redirect('/panel/ofertas');
     } catch (error) {
-        console.error('Error en bloqueo de cupos:', error);
+        logger.error('Error en bloqueo de cupos:', error);
         res.status(500).send('Error interno');
     }
 };

@@ -26,3 +26,4 @@ const pool = mysql.createPool({
 
 // Exportamos LA INSTANCIA (sin función flecha)
 module.exports = pool;
+module.exports.construirSsl = construirSsl;

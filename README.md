@@ -1,95 +1,95 @@
-#  Organización Inteligente - Plataforma de Registro Educativo
+# Organización Inteligente - Plataforma de Registro Educativo
 
-Un sistema integral de gestión académica diseñado para automatizar la inscripción de participantes, control de cupos, pagos y accesos B2B para empresas. Desarrollado bajo la arquitectura MVC (Modelo-Vista-Controlador).
+Sistema integral de gestión académica: inscripción de participantes con control
+de cupos en tiempo real, flujo de pagos con revisión administrativa y portal B2B
+para inscripción masiva de empleados por parte de empresas. Arquitectura MVC
+(Node.js + Express + MySQL).
 
-##  Características Principales
+## Características
 
-* **Portal Público:** Registro fluido de estudiantes, control en tiempo real de cupos disponibles y reporte de pagos individuales con subida de comprobantes.
-* **Portal Empresas (B2B):** Acceso seguro mediante OTP (One-Time Password) al correo. Permite a los departamentos de RRHH registrar lotes masivos de empleados de un solo golpe y reportar pagos consolidados.
-* **Panel de Administración:** Dashboard protegido por sesiones para crear/editar cursos, aprobar/rechazar pagos masivos e individuales, y gestionar el contacto con las empresas.
-* **Notificaciones Automatizadas:** Integración con Nodemailer para enviar correos de bienvenida, rechazo de pagos y validación de seguridad.
-* **Integridad de Datos:** Uso de Transacciones SQL (`COMMIT`/`ROLLBACK`) para garantizar que los registros masivos no corrompan la base de datos si ocurre un error a mitad de proceso.
+- **Portal público:** registro individual con verificación de identidad por OTP,
+  multi-inscripción a capacitaciones, reporte de pagos con comprobante.
+- **Portal empresas (B2B):** acceso OTP para contactos corporativos, registro de
+  lotes (hasta 200 empleados por envío) y reporte de pagos consolidados.
+- **Panel admin:** gestión de ofertas/cupos/bloqueos, conciliación o rechazo de
+  pagos individuales y de lotes, edición de participantes, alta de empresas.
+- **Notificaciones:** correos transaccionales vía **Resend** (único motor de correo).
 
-## 🛠️ Tecnologías y Dependencias
+## Seguridad
 
-* **Backend:** Node.js, Express.js
-* **Base de Datos:** MySQL (con pool de conexiones)
-* **Frontend:** EJS (Embedded JavaScript templates), Tailwind CSS, Iconify.
-* **Seguridad y Utilidades:**
-  * `bcryptjs`: Encriptación de contraseñas de administrador.
-  * `express-session`: Manejo de sesiones seguras.
-  * `multer`: Procesamiento y validación de imágenes de pago en memoria RAM.
-  * `nodemailer`: Envío de correos electrónicos transaccionales.
-  * `dotenv`: Gestión de variables de entorno.
+| Control | Implementación |
+|---|---|
+| CSRF | Double-submit cookie (`csrf-csrf`) ligado al sessionID en todos los mutadores |
+| Validación de entrada | Schemas **Zod** server-side en todos los flujos; normalización de teléfonos |
+| Fuerza bruta | `express-rate-limit`: OTP (5/15min), validación OTP (10/15min), login admin (10/15min) |
+| Anti-enumeración | Respuestas genéricas antes de validar el código; bifurcación nuevo/existente solo post-OTP |
+| Fijación de sesión | `session.regenerate()` tras validar OTP |
+| IDOR | Guardias de sesión: cada participante/empresa solo accede a SUS datos |
+| Sesiones | Store persistente en MySQL (`express-mysql-session`) + cookies httpOnly/sameSite |
+| Cabeceras | Helmet + CSP estricta (sin CDNs de JS; Tailwind compilado localmente) |
+| Integridad BD | Transacciones atómicas + `SELECT ... FOR UPDATE` contra sobreventa de cupos |
 
-## ⚙️ Requisitos Previos e Instalación
+## Requisitos
 
-1. **Clona este repositorio en tu máquina local:**
-   ```bash
-   git clone [https://github.com/TuUsuario/OI-APP-REGISTRO.git](https://github.com/TuUsuario/OI-APP-REGISTRO.git)
-   cd OI-APP-REGISTRO
-   ```
-## Instala todas las dependencias necesarias:
+- Node.js 18+ (probado en 22)
+- MySQL 8 (local o gestionado, p. ej. Aiven)
 
-   ```bash
-npm install
-   ```
-
-## Importa la base de datos:
-**Ejecuta el archivo oi_cap_db_final.sql incluido en el repositorio dentro de tu gestor de MySQL (phpMyAdmin, MySQL Workbench, etc.) para crear las tablas y relaciones necesarias.**
-
-## Configura el entorno:
-**Crea un archivo llamado .env en la raíz del proyecto y añade las siguientes variables clave:**
+## Puesta en marcha
 
 ```bash
-# Configuración del Servidor
-PORT=3000
-NODE_ENV=development
+npm install
+cp .env.example .env      # completar credenciales
+npm run build:css         # compila Tailwind -> public/css/tailwind.css
+npm start                 # http://localhost:3000
+```
 
-# Credenciales de la Base de Datos
-DB_HOST=localhost
-DB_USER=root
-DB_PASS=tu_contraseña_aqui
-DB_NAME=oi_cap_db_final
+### Variables de entorno (.env)
 
-# Credenciales del Servidor de Correos (Ej. Gmail App Password)
-EMAIL_USER=tu_correo@gmail.com
-EMAIL_PASS=tu_clave_de_aplicacion
-ADMIN_EMAIL=correo_receptor_notificaciones@gmail.com
+Ver `.env.example`. Claves:
 
-# Seguridad de Sesiones
-SESSION_SECRET=un_secreto_muy_seguro_para_cookies
-   ```
+| Variable | Descripción |
+|---|---|
+| `PORT`, `NODE_ENV` | Puerto y entorno (`production` activa cookies secure + logs JSON) |
+| `DB_HOST/USER/PASS/NAME/PORT` | Conexión MySQL (app + sesiones) |
+| `DB_SSL` / `DB_SSL_CA` | TLS hacia la BD (Aiven: `DB_SSL=true`) |
+| `SESSION_SECRET` | Semilla de firmas de sesión (obligatoria, aleatoria) |
+| `RESEND_API_KEY`, `MAIL_FROM`, `ADMIN_EMAIL` | Envío de correo y buzón de notificaciones |
 
-## 💻 Ejecución del Proyecto
-**Para levantar el servidor en entorno de desarrollo, ejecuta:**
+## Scripts
 
-   ```
-npm start
-   ```
+| Comando | Acción |
+|---|---|
+| `npm start` | Arranca el servidor |
+| `npm test` | Suite de humo/seguridad (`node --test`, no escribe datos) |
+| `npm run build:css` | Recompila Tailwind tras editar vistas |
+| `node scripts/dump-schema.js` | Regenera `sql/schema.sql` desde la BD real |
 
-**El sistema estara disponible en la url "http://localhost:3000"**
+## Estructura
 
+```
+src/
+  app.js               # Express: seguridad, sesiones, CSRF, rutas, errores
+  config/database.js   # Pool mysql2 (+TLS opcional)
+  controllers/         # publicoController / adminController
+  models/              # publicoModel / adminModel (SQL + transacciones)
+  routes/              # publico.js / admin.js
+  middlewares/         # auth (sesiones), rateLimiters, upload (multer)
+  utils/               # mailer (Resend), validators (Zod), dbUtils (txns), logger (pino)
+  views/               # EJS: principal/, admin/
+public/                # css compilado, js cliente, imágenes
+sql/schema.sql         # esquema versionado de la BD
+test/app.test.js       # suite supertest
+```
 
-## Flujo de la Base de Datos (Arquitectura de Datos)
-**El sistema está diseñado bajo estrictas reglas de integridad relacional (Foreign Keys).**
+## Despliegue
 
-**Entidades Principales: persona (datos del estudiante) y capacitacion_oferta (curso abierto).**
+- **Render:** `npm start`; definir todas las variables del `.env` en el dashboard.
+  Las sesiones viven en MySQL: los reinicios del servicio no cierran sesiones.
+- **cPanel (Setup Node.js App):** subir repo sin `node_modules`, instalar deps,
+  ejecutar `npm run build:css` una vez y arrancar con `npm start`.
 
-**Tabla Puente (inscripcion): Cuando un usuario se registra, se une la persona con la oferta en esta tabla. Nace con un estado 'pendiente'.**
+## Notas
 
-**Flujo de Pagos (pago_reportado): Al reportar el pago, el comprobante se vincula al código de inscripción y el estado pasa a 'en_revision'.**
-
-**Conciliación Administrativa: El administrador visualiza los lotes o usuarios individuales en revisión.**
-
-**Si Aprueba: El estado pasa a 'conciliado', se confirma el cupo y se envía correo.**
-
-**Si Rechaza: Se hace un DELETE del comprobante en la tabla de pagos y el estado de la inscripción hace rollback a 'rechazado', permitiendo al usuario volver a intentar sin perder sus datos.**
-
-
-
-
-
-
-
-
+- El historial Git fue purgado de secretos históricos; las credenciales rotadas
+  viven únicamente en el `.env` de cada entorno.
+- `sql/schema.sql` es referencia documental generada de la base real; no incluye datos.

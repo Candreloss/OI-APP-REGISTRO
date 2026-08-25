@@ -1,9 +1,10 @@
 // src/utils/mailer.js
+const logger = require('./logger');
 // Motor único de correo: RESEND API.
 const { Resend } = require('resend');
 
 if (!process.env.RESEND_API_KEY) {
-    console.error('[MAILER] ❌ Falta RESEND_API_KEY en las variables de entorno.');
+    logger.error('[MAILER] ❌ Falta RESEND_API_KEY en las variables de entorno.');
 }
 
 const resend = new Resend(process.env.RESEND_API_KEY);
@@ -26,15 +27,15 @@ const transporter = {
             });
 
             if (error) {
-                console.error('[MAILER] ❌ Error devuelto por Resend:', error);
+                logger.error('[MAILER] ❌ Error devuelto por Resend:', error);
                 throw error;
             }
 
-            console.log(`[MAILER] ✅ Correo enviado a ${opciones.to} | ID: ${data.id}`);
+            logger.info(`[MAILER] ✅ Correo enviado a ${opciones.to} | ID: ${data.id}`);
             return data;
 
         } catch (error) {
-            console.error('[MAILER] ❌ Error general en envío:', error);
+            logger.error('[MAILER] ❌ Error general en envío:', error);
             throw error;
         }
     }

@@ -1,6 +1,7 @@
 // src/models/PublicoModel.js
 const connection = require('../config/database');
 const { q, enTransaccion } = require('../utils/dbUtils');
+const logger = require('../utils/logger');
 
 const PublicoModel = {};
 
@@ -74,7 +75,7 @@ PublicoModel.registrarUsuarioEInscripcion = (datosPersona, capacitacion) => {
             await q(conn, 'INSERT INTO persona_capacitacion (pcap_perdoc, pcap_oferta) VALUES (?, ?)', [cedula, capacitacion]);
         } catch (errAcademico) {
             // El registro académico es secundario: no revierte la inscripción.
-            console.error('Error en Fase Académica:', errAcademico);
+            logger.error('Error en Fase Académica:', errAcademico);
         }
         return true;
     });
@@ -205,7 +206,7 @@ PublicoModel.inscripcionRapida = (cedula, capacitacion) => {
         try {
             await q(conn, 'INSERT INTO persona_capacitacion (pcap_perdoc, pcap_oferta) VALUES (?, ?)', [cedula, capacitacion]);
         } catch (errAcademico) {
-            console.error('Error en Fase Académica rápida:', errAcademico);
+            logger.error('Error en Fase Académica rápida:', errAcademico);
         }
         return true;
     });

@@ -2,9 +2,11 @@
 const express = require('express');
 const path = require('path');
 const session = require('express-session');
+const MySQLStore = require('express-mysql-session')(session);
 const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 const { doubleCsrf } = require('csrf-csrf');
+const logger = require('./utils/logger');
 
 // Inicializamos Express
 const app = express();
@@ -15,13 +17,13 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 
 // --- SEGURIDAD DE CABECERAS ---
-// CSP alineada con los recursos externos actuales (Tailwind CDN e Iconify se
-// eliminan en la Fase 3, momento en el que esta política podrá endurecerse).
+// Tailwind se sirve compilado desde /css (sin CDN). Iconify y las fuentes
+// de Google siguen siendo externos.
 app.use(helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
-            scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.tailwindcss.com', 'https://code.iconify.design'],
+            scriptSrc: ["'self'", "'unsafe-inline'", 'https://code.iconify.design'],
             styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
             fontSrc: ["'self'", 'https://fonts.gstatic.com'],
             connectSrc: ["'self'", 'https://api.iconify.design'],
@@ -42,9 +44,31 @@ app.use(express.json());
 app.use(cookieParser());
 
 // --- SESIONES ---
+// Store persistente en MySQL: los reinicios de Render ya no cierran sesiones
+// ni abortan flujos OTP a mitad de camino. El store crea y limpia sus tablas
+// por sí mismo (sessions / sessions_expired).
+let sessionStore;
+if (process.env.DB_HOST) {
+    const { construirSsl } = require('./config/database');
+    sessionStore = new MySQLStore({
+        host: process.env.DB_HOST,
+        port: parseInt(process.env.DB_PORT || '3306', 10),
+        user: process.env.DB_USER,
+        password: process.env.DB_PASS,
+        database: process.env.DB_NAME,
+        ssl: construirSsl(),
+        createDatabaseTable: true,
+        clearExpired: true,
+        checkExpirationInterval: 15 * 60 * 1000 // purga de expiradas cada 15 min
+    });
+} else {
+    logger.warn('DB_HOST ausente: usando MemoryStore para sesiones (solo desarrollo local sin BD).');
+}
+
 app.use(session({
     secret: process.env.SESSION_SECRET,
     name: 'oi.sid',
+    store: sessionStore,
     resave: false,
     saveUninitialized: false,
     cookie: {
@@ -86,6 +110,21 @@ app.use(doubleCsrfProtection);
 // Archivos estáticos (CSS, JS, Imágenes)
 app.use(express.static(path.join(__dirname, '../public')));
 
+// --- RUTAS ---
+// Montadas aquí (y no en index.js) para que cualquier entrypoint —servidor o
+// tests— ejecute exactamente la misma aplicación.
+app.use('/', require('./routes/publico'));
+app.use('/', require('./routes/admin'));
+
+// --- 404 ---
+// Cualquier ruta no emparejada cae aquí.
+app.use((req, res) => {
+    if (req.path.startsWith('/api') || req.path.startsWith('/panel')) {
+        return res.status(404).json({ success: false, message: 'Recurso no encontrado.' });
+    }
+    res.status(302).redirect('/');
+});
+
 // --- MANEJADOR DE ERRORES ---
 // Captura errores de CSRF y fallos no controlados sin filtrar detalles internos.
 // eslint-disable-next-line no-unused-vars
@@ -93,7 +132,7 @@ app.use((err, req, res, next) => {
     if (err === invalidCsrfTokenError) {
         return res.status(403).json({ success: false, message: 'Token de seguridad inválido o expirado. Recarga la página.' });
     }
-    console.error('[ERROR NO CONTROLADO]', err);
+    logger.error({ err, ruta: req.path, metodo: req.method }, 'Error no controlado');
     if (req.accepts('html') && !req.path.startsWith('/api')) {
         return res.status(500).send('Error interno del servidor');
     }

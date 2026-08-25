@@ -1,5 +1,6 @@
 // src/controllers/publicoController.js
 const crypto = require('crypto');
+const logger = require('../utils/logger');
 const transporter = require('../utils/mailer');
 const PublicoModel = require('../models/publicoModel');
 const {
@@ -46,7 +47,7 @@ controller.mostrarPrincipal = async (req, res) => {
         const ofertas = await PublicoModel.obtenerOfertasActivas();
         res.render('principal/principal', { title: 'Página Principal', ofertas });
     } catch (error) {
-        console.error('Error al cargar ofertas:', error);
+        logger.error('Error al cargar ofertas:', error);
         res.render('principal/principal', { title: 'Página Principal', ofertas: [] });
     }
 };
@@ -74,7 +75,7 @@ controller.registrarParticipante = async (req, res) => {
         if (errorObj.tipo === 'inscripcion' && errorObj.error && errorObj.error.code === 'ER_DUP_ENTRY') {
             return res.status(400).json({ success: false, message: '¡Ya te encuentras registrado en esta capacitación!' });
         }
-        console.error("Error en registro:", errorObj);
+        logger.error("Error en registro:", errorObj);
         res.status(500).json({ success: false, message: 'Error interno procesando la inscripción.' });
     }
 };
@@ -111,7 +112,7 @@ controller.solicitarOTP = async (req, res) => {
 
         res.json({ success: true, message: MENSAJE_OTP_GENERICO });
     } catch (error) {
-        console.error('Error enviando correo OTP:', error);
+        logger.error('Error enviando correo OTP:', error);
         res.status(500).json({ success: false, message: 'Error al procesar la solicitud. Intenta de nuevo.' });
     }
 };
@@ -158,7 +159,7 @@ controller.validarOTP = async (req, res) => {
 
         res.json({ success: true, message: 'Código validado correctamente', esNuevo, nombre: nombreUsuario });
     } catch (error) {
-        console.error("Error validando OTP:", error);
+        logger.error("Error validando OTP:", error);
         res.status(500).json({ success: false, message: 'Error en el servidor' });
     }
 };
@@ -179,7 +180,7 @@ controller.obtenerCursosPendientes = async (req, res) => {
         const resultados = await PublicoModel.obtenerCursosPendientes(identidad.cedula);
         res.json(resultados);
     } catch (error) {
-        console.error('Error buscando cursos pendientes:', error);
+        logger.error('Error buscando cursos pendientes:', error);
         res.status(500).json([]);
     }
 };
@@ -225,14 +226,14 @@ controller.reportarPago = async (req, res) => {
                 <p>El comprobante ha sido adjuntado.</p>
             `,
             attachments: [{ filename: `comprobante_${d.referencia}.jpg`, content: comprobante.buffer }]
-        }).catch(err => console.error('Error enviando correo de pago:', err.message));
+        }).catch(err => logger.error('Error enviando correo de pago:', err.message));
 
         res.json({ success: true, message: '¡Pago y capture reportados con éxito! El administrador lo revisará pronto.' });
     } catch (error) {
         if (error.tipo === 'validacion') {
             return res.status(400).json({ success: false, message: error.message });
         }
-        console.error('Error registrando pago:', error);
+        logger.error('Error registrando pago:', error);
         res.status(500).json({ success: false, message: 'Hubo un problema procesando tu reporte. Si persiste, contáctanos.' });
     }
 };
@@ -249,7 +250,7 @@ controller.obtenerOfertasDisponibles = async (req, res) => {
         const resultados = await PublicoModel.obtenerOfertasDisponibles(identidad.cedula);
         res.json(resultados);
     } catch (error) {
-        console.error('Error buscando ofertas disponibles:', error);
+        logger.error('Error buscando ofertas disponibles:', error);
         res.status(500).json([]);
     }
 };
@@ -277,7 +278,7 @@ controller.inscripcionRapida = async (req, res) => {
         if (errorObj.code === 'ER_DUP_ENTRY') {
             return res.status(400).json({ success: false, message: 'Ya estás inscrito en esta capacitación.' });
         }
-        console.error('Error en inscripción rápida:', errorObj);
+        logger.error('Error en inscripción rápida:', errorObj);
         res.status(500).json({ success: false, message: 'Error interno del servidor.' });
     }
 };
@@ -322,7 +323,7 @@ controller.solicitarOTPEmpresa = async (req, res) => {
 
         res.json({ success: true, message: MENSAJE_OTP_GENERICO });
     } catch (error) {
-        console.error('Error en OTP Empresa:', error);
+        logger.error('Error en OTP Empresa:', error);
         res.status(500).json({ success: false, message: 'Error interno al generar código.' });
     }
 };
@@ -333,7 +334,7 @@ controller.apiOfertasActivas = async (req, res) => {
         const ofertas = await PublicoModel.obtenerOfertasActivas();
         res.json(ofertas);
     } catch (error) {
-        console.error('Error cargando ofertas API:', error);
+        logger.error('Error cargando ofertas API:', error);
         res.status(500).json([]);
     }
 };
@@ -364,7 +365,7 @@ controller.registrarLoteEmpresa = async (req, res) => {
         if (errorObj.tipo === 'validacion') {
             return res.status(400).json({ success: false, message: errorObj.message });
         }
-        console.error('Error procesando lote B2B:', errorObj);
+        logger.error('Error procesando lote B2B:', errorObj);
         if (errorObj.code === 'ER_DUP_ENTRY') {
             res.status(400).json({ success: false, message: 'Operación cancelada: Uno o más empleados del lote ya están inscritos en esa capacitación.' });
         } else {
@@ -392,7 +393,7 @@ controller.obtenerLoteExistente = async (req, res) => {
         const empleados = await PublicoModel.obtenerLoteExistente(empresas[0].id_contacto, capacitacion);
         res.json(empleados);
     } catch (error) {
-        console.error('Error consultando lote existente:', error);
+        logger.error('Error consultando lote existente:', error);
         res.status(500).json([]);
     }
 };
@@ -414,7 +415,7 @@ controller.obtenerLotesPendientesEmpresa = async (req, res) => {
         const lotes = await PublicoModel.obtenerLotesEmpresaPendientes(empresas[0].id_contacto);
         res.json(lotes);
     } catch (error) {
-        console.error('Error consultando lotes pendientes:', error);
+        logger.error('Error consultando lotes pendientes:', error);
         res.status(500).json([]);
     }
 };
@@ -462,11 +463,11 @@ controller.reportarPagoB2B = async (req, res) => {
                 </ul>
             `,
             attachments: [{ filename: `comprobante_b2b_${d.referencia}.jpg`, content: comprobante.buffer }]
-        }).catch(err => console.error('Error enviando correo B2B:', err.message));
+        }).catch(err => logger.error('Error enviando correo B2B:', err.message));
 
         res.json({ success: true, message: `¡Pago reportado para los ${pendientes.length} empleados con éxito!` });
     } catch (error) {
-        console.error('Error en pago B2B:', error);
+        logger.error('Error en pago B2B:', error);
         res.status(500).json({ success: false, message: 'Error interno guardando el pago corporativo.' });
     }
 };
