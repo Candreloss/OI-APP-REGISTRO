@@ -236,7 +236,9 @@ PublicoModel.verificarIdentidadParaOTP = (cedula, email) => {
             connection.query(qEmpresa, [cedula, email], (errE, rowsE) => {
                 if (errE) return reject(errE);
                 if (rowsE.length > 0) return resolve({ tipo: 'empresa' });
-                resolve(null);
+                // No existe en ninguna tabla → usuario nuevo, lo tratamos como participante
+                // para permitirle completar el registro tras validar OTP.
+                resolve({ tipo: 'participante' });
             });
         });
     });
