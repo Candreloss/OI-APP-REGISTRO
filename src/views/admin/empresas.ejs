@@ -45,8 +45,8 @@
                         
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <% lotes.forEach((lote) => { %>
-                                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 flex justify-between items-center">
-                                    <div>
+                                <div class="border border-gray-200 rounded-lg p-4 bg-gray-50 flex justify-between items-start">
+                                    <div class="flex-1">
                                         <p class="font-bold text-blue-700 text-sm"><%= lote.empresa_nombre %></p>
                                         <p class="text-gray-900 font-medium"><%= lote.capnombre %></p>
                                         <p class="text-gray-500 text-xs mt-1">
@@ -54,6 +54,14 @@
                                                 <%= lote.total_empleados %> Empleados en espera
                                             </span>
                                         </p>
+                                        <% if (lote.titular_nombre) { %>
+                                        <div class="mt-2 text-xs text-gray-600 border-t border-gray-200 pt-2 space-y-0.5">
+                                            <p><span class="font-semibold">Titular:</span> <%= lote.titular_nombre %> <%= lote.titular_apellido %></p>
+                                            <p><span class="font-semibold">Banco:</span> <%= lote.banco_origen %></p>
+                                            <p><span class="font-semibold">Ref:</span> <%= lote.referencia %></p>
+                                            <p><span class="font-semibold">Tel:</span> <%= lote.titular_telefono %></p>
+                                        </div>
+                                        <% } %>
                                     </div>
                                     <div style="display: flex; gap: 8px; align-items: center;">
                                         <button type="button" 

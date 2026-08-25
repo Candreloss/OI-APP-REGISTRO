@@ -197,18 +197,26 @@ AdminModel.registrarContactoEmpresa = (datos) => {
     });
 };
 
-// 9. Obtener lotes B2B pendientes de aprobación
+// 9. Obtener lotes B2B pendientes de aprobación (con datos del pago reportado)
 AdminModel.obtenerLotesPendientes = () => {
     return new Promise((resolve, reject) => {
         const query = `
             SELECT 
                 ce.id_contacto, ce.empresa_nombre, ce.emp_email,
                 co.capofcodigo, c.capnombre,
-                COUNT(i.inscodigo) as total_empleados
+                COUNT(DISTINCT i.inscodigo) as total_empleados,
+                MIN(pr.titular_nombre)  AS titular_nombre,
+                MIN(pr.titular_apellido) AS titular_apellido,
+                MIN(pr.titular_telefono) AS titular_telefono,
+                MIN(pr.banco_origen)    AS banco_origen,
+                MIN(pr.referencia)      AS referencia,
+                MIN(pr.fecha_reporte)   AS fecha_reporte
             FROM inscripcion i
             JOIN contacto_empresa ce ON i.ins_empresa_id = ce.id_contacto
             JOIN capacitacion_oferta co ON i.ins_oferta = co.capofcodigo
             JOIN capacitacion c ON co.capofcapcodigo = c.capcodigo
+            LEFT JOIN pago_reportado pr ON pr.pago_empresa_id = ce.id_contacto
+                                       AND pr.pago_inscodigo  = i.inscodigo
             WHERE i.ins_estado = 'en_revision'
             GROUP BY ce.id_contacto, co.capofcodigo, ce.empresa_nombre, ce.emp_email, c.capnombre
         `;
