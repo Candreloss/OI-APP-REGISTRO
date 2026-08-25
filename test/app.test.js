@@ -117,3 +117,28 @@ describe('Validación e integridad', () => {
         assert.equal(r.data.titular_telefono, '+58 4141234567');
     });
 });
+
+describe('Logout y toggles', () => {
+    test('GET /logout ya no existe (mutación por POST)', async () => {
+        const res = await request(app).get('/logout');
+        assert.notEqual(res.status, 200);
+    });
+
+    test('POST /logout sin sesión devuelve JSON', async () => {
+        const { agent, token } = await obtenerTokenCsrf();
+        const res = await agent
+            .post('/logout')
+            .set('X-CSRF-Token', token);
+        assert.equal(res.status, 200);
+        assert.equal(res.body.success, true);
+    });
+});
+
+describe('Rate limiting CSRF', () => {
+    test('GET /csrf-token devuelve token válido', async () => {
+        const res = await request(app).get('/csrf-token');
+        assert.equal(res.status, 200);
+        assert.ok(res.body.token);
+        assert.ok(res.body.token.length > 40);
+    });
+});

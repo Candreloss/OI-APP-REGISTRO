@@ -76,6 +76,8 @@ CREATE TABLE IF NOT EXISTS `inscripcion` (
   UNIQUE KEY `unq_persona_oferta_pago` (`ins_perdoc`,`ins_oferta`),
   KEY `fk_ins_oferta` (`ins_oferta`),
   KEY `fk_ins_empresa` (`ins_empresa_id`),
+  KEY `idx_ins_empresa_estado` (`ins_empresa_id`,`ins_estado`),
+  KEY `idx_ins_estado` (`ins_estado`),
   CONSTRAINT `fk_ins_empresa` FOREIGN KEY (`ins_empresa_id`) REFERENCES `contacto_empresa` (`id_contacto`) ON DELETE SET NULL ON UPDATE CASCADE,
   CONSTRAINT `fk_ins_oferta` FOREIGN KEY (`ins_oferta`) REFERENCES `capacitacion_oferta` (`capofcodigo`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_ins_persona` FOREIGN KEY (`ins_perdoc`) REFERENCES `persona` (`perdoc`) ON DELETE CASCADE ON UPDATE CASCADE
@@ -102,6 +104,7 @@ CREATE TABLE IF NOT EXISTS `pago_reportado` (
   PRIMARY KEY (`id_pago`),
   KEY `fk_pago_inscripcion` (`pago_inscodigo`),
   KEY `fk_pago_empresa` (`pago_empresa_id`),
+  KEY `idx_pago_empresa` (`pago_empresa_id`),
   CONSTRAINT `fk_pago_empresa` FOREIGN KEY (`pago_empresa_id`) REFERENCES `contacto_empresa` (`id_contacto`) ON DELETE CASCADE ON UPDATE CASCADE,
   CONSTRAINT `fk_pago_inscripcion` FOREIGN KEY (`pago_inscodigo`) REFERENCES `inscripcion` (`inscodigo`) ON DELETE CASCADE ON UPDATE CASCADE
 ) ENGINE=InnoDB AUTO_INCREMENT=19 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -143,6 +146,7 @@ CREATE TABLE IF NOT EXISTS `token_otp` (
   `expira_en` datetime NOT NULL,
   `usado` tinyint(1) NOT NULL DEFAULT '0',
   `creado_en` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  PRIMARY KEY (`id_otp`)
+  PRIMARY KEY (`id_otp`),
+  KEY `idx_otp_email_used` (`email`,`usado`,`expira_en`)
 ) ENGINE=InnoDB AUTO_INCREMENT=78 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 

@@ -7,6 +7,7 @@ const cookieParser = require('cookie-parser');
 const helmet = require('helmet');
 const { doubleCsrf } = require('csrf-csrf');
 const logger = require('./utils/logger');
+const { csrfLimiter } = require('./middlewares/rateLimiters');
 
 // Inicializamos Express
 const app = express();
@@ -95,7 +96,7 @@ const { doubleCsrfProtection, generateCsrfToken, invalidCsrfTokenError } = doubl
 });
 
 // Entrega de tokens CSRF para el cliente (apiFetch los solicita aquí).
-app.get('/csrf-token', (req, res) => {
+app.get('/csrf-token', csrfLimiter, (req, res) => {
     // Con saveUninitialized:false, una sesión vacía no emite cookie y el
     // sessionID cambiaría en cada petición (el token quedaría firmado con un
     // identificador efímero). Marcamos la sesión para persistirla.

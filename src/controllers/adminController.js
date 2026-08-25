@@ -78,15 +78,31 @@ adminController.mostrarPanel = async (req, res) => {
 // --- MOSTRAR PARTICIPANTES Y PAGOS (Refactorizado con Modelo) ---
 adminController.mostrarParticipantes = async (req, res) => {
     try {
-        const inscripciones = await AdminModel.obtenerParticipantes();
+        const pagina = Math.max(1, parseInt(req.query.pagina, 10) || 1);
+        const porPagina = 25;
+        const estado = req.query.estado || null;
+        const empresa = req.query.empresa || null;
+        const capacitacion = req.query.capacitacion || null;
+        const busqueda = (req.query.q || '').trim() || null;
+
+        const [{ inscripciones, total, totalPaginas }, opciones] = await Promise.all([
+            AdminModel.obtenerParticipantes({ pagina, porPagina, estado, empresa, capacitacion, busqueda }),
+            AdminModel.obtenerOpcionesFiltros()
+        ]);
+        
         res.render('admin/participantes', { 
             title: 'Participantes y Pagos', 
             admin: req.session.admin, 
-            inscripciones 
+            inscripciones,
+            pagina,
+            totalPaginas,
+            total,
+            filtros: { estado, empresa, capacitacion, busqueda },
+            opciones
         });
     } catch (error) {
         logger.error('Error cargando participantes:', error);
-        res.render('admin/participantes', { title: 'Participantes y Pagos', admin: req.session.admin, inscripciones: [] });
+        res.render('admin/participantes', { title: 'Participantes y Pagos', admin: req.session.admin, inscripciones: [], pagina:1, totalPaginas:1, total:0, filtros:{}, opciones:{ capacitaciones:[], empresas:[] } });
     }
 };
 
@@ -140,10 +156,11 @@ adminController.toggleEstatusOferta = async (req, res) => {
         const accion = nuevoEstatus === 0 ? 'DESACTIVÓ 🔴' : 'ACTIVÓ 🟢';
         logger.info(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - ESTATUS MODIFICADO | Admin: ${req.session.admin.username} | ${accion} Oferta ID: ${id}`);
         
-        const urlAnterior = req.get('Referer');
-        if (urlAnterior && urlAnterior.includes('/panel/ofertas')) res.redirect('/panel/ofertas'); 
-        else res.redirect('/panel'); 
-    } catch (error) { res.status(500).send('Error al actualizar'); }
+        res.json({ success: true, message: nuevoEstatus === 0 ? 'Oferta desactivada.' : 'Oferta activada.' });
+    } catch (error) {
+        logger.error('Error actualizando estatus de oferta:', error);
+        res.status(500).json({ success: false, message: 'Error al actualizar la oferta.' });
+    }
 };
 
 adminController.mostrarEditarOferta = async (req, res) => {
@@ -152,7 +169,7 @@ adminController.mostrarEditarOferta = async (req, res) => {
 
     try {
         const ofertaResult = await AdminModel.obtenerOfertaPorId(id);
-        if (!ofertaResult) return res.status(500).send('Error interno');
+        if (!ofertaResult) return res.status(404).send('Oferta no encontrada');
         
         const capResult = await AdminModel.obtenerCapacitacionesBase();
         res.render('admin/editarOferta', { title: 'Editar Oferta - OI', admin: req.session.admin, oferta: ofertaResult, capacitacionesBase: capResult });
@@ -405,13 +422,14 @@ adminController.registrarContactoEmpresa = async (req, res) => {
 
 adminController.toggleBloqueoCupos = async (req, res) => {
     const id = parseInt(req.params.id, 10);
-    if (isNaN(id)) return res.status(400).send('ID inválido');
+    if (isNaN(id)) return res.status(400).json({ success: false, message: 'ID inválido' });
     try {
         const oferta = await AdminModel.obtenerOfertaPorId(id);
-        if (!oferta) return res.status(404).send('Oferta no encontrada');
+        if (!oferta) return res.status(404).json({ success: false, message: 'Oferta no encontrada' });
         const nuevoBloqueo = oferta.cupos_bloqueados === 1 ? 0 : 1;
         await AdminModel.toggleBloqueoCupos(id, nuevoBloqueo);
-        res.redirect('/panel/ofertas');
+        logger.info(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - CUPOS ${nuevoBloqueo === 1 ? 'BLOQUEADOS 🔒' : 'DESBLOQUEADOS 🔓'} | Admin: ${req.session.admin.username} | Oferta ID: ${id}`);
+        res.json({ success: true, message: nuevoBloqueo === 1 ? 'Inscripciones cerradas.' : 'Inscripciones abiertas.' });
     } catch (error) {
         logger.error('Error en bloqueo de cupos:', error);
         res.status(500).send('Error interno');

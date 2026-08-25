@@ -43,7 +43,7 @@
             </nav>
             
             <div class="sidebar-footer">
-                <a href="/logout" class="nav-item logout-btn">
+                <a href="/logout" class="nav-item logout-btn" onclick="cerrarSesion(event)">
                     <iconify-icon icon="lucide:log-out"></iconify-icon>
                     <span>Cerrar Sesión</span>
                 </a>
@@ -135,6 +135,16 @@
     </div>
 
     <script src="/js/csrf.js"></script>
+    <script>
+      async function cerrarSesion(evento) {
+        evento.preventDefault();
+        try {
+          await apiFetch("/logout", { method: "POST" });
+        } finally {
+          window.location.href = "/admin";
+        }
+      }
+    </script>
     <script>
       document.querySelectorAll('.btn-desactivar-oferta').forEach((btn) => {
           btn.addEventListener('click', async () => {

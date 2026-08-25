@@ -38,4 +38,13 @@ const adminLoginLimiter = rateLimit({
     message: { success: false, message: 'Demasiados intentos de inicio de sesión. Espera 15 minutos.' }
 });
 
-module.exports = { apiLimiter, otpSolicitudLimiter, otpValidacionLimiter, adminLoginLimiter };
+// Endpoint de tokens CSRF: evita que un atacante llene la tabla sessions.
+const csrfLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000,
+    limit: 30,
+    standardHeaders: 'draft-7',
+    legacyHeaders: false,
+    message: { success: false, message: 'Demasiadas solicitudes de token. Espera un minuto.' }
+});
+
+module.exports = { apiLimiter, otpSolicitudLimiter, otpValidacionLimiter, adminLoginLimiter, csrfLimiter };

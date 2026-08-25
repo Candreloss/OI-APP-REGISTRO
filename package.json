@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node index.js",
     "build:css": "tailwindcss -i ./public/css/tailwind.input.css -o ./public/css/tailwind.css --minify",
-    "test": "node --test --test-force-exit --test-timeout=60000"
+    "test": "node --test --test-force-exit --test-timeout=60000",
+    "stress": "node -r dotenv/config scripts/stress-test.js"
   },
   "repository": {
     "type": "git",
@@ -39,6 +40,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "autocannon": "^8.0.0",
     "supertest": "^7.2.2",
     "tailwindcss": "^3.4.19"
   }

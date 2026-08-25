@@ -65,27 +65,94 @@ AdminModel.obtenerTodasLasOfertas = () => {
 };
 
 // 5. Obtener Lista de Participantes y Pagos
-AdminModel.obtenerParticipantes = () => {
+AdminModel.obtenerParticipantes = ({ pagina = 1, porPagina = 25, estado, empresa, capacitacion, busqueda } = {}) => {
     return new Promise((resolve, reject) => {
-        const query = `
-            SELECT 
-                i.inscodigo, i.ins_estado, DATE_FORMAT(i.ins_fecha, '%d/%m/%Y') as fecha_formateada,
-                p.perdoc, p.pernombre, p.perapellido, p.pertelefono, p.peremail, p.perpais, p.perciudad,
-                c.capnombre,
-                pr.titular_nombre, pr.titular_apellido, pr.banco_origen, pr.referencia, pr.titular_telefono as tlf_pago,
-                DATE_FORMAT(pr.fecha_reporte, '%d/%m/%Y %h:%i %p') as fecha_pago,
-                ce.empresa_nombre
+        const condiciones = [];
+        const params = [];
+
+        if (estado && ['pendiente', 'en_revision', 'conciliado', 'rechazado'].includes(estado)) {
+            condiciones.push('i.ins_estado = ?');
+            params.push(estado);
+        }
+        if (empresa) {
+            if (empresa === 'SIN_EMPRESA') {
+                condiciones.push('i.ins_empresa_id IS NULL');
+            } else {
+                condiciones.push('ce.empresa_nombre = ?');
+                params.push(empresa);
+            }
+        }
+        if (capacitacion) {
+            condiciones.push('c.capnombre = ?');
+            params.push(capacitacion);
+        }
+        if (busqueda) {
+            condiciones.push('(p.perdoc LIKE ? OR p.pernombre LIKE ? OR p.perapellido LIKE ?)');
+            const term = `%${busqueda}%`;
+            params.push(term, term, term);
+        }
+
+        const where = condiciones.length ? `WHERE ${condiciones.join(' AND ')}` : '';
+        const offset = (Math.max(1, pagina) - 1) * porPagina;
+
+        // 1) total de filas
+        const countSql = `SELECT COUNT(*) AS total
             FROM inscripcion i
             JOIN persona p ON i.ins_perdoc = p.perdoc
             JOIN capacitacion_oferta co ON i.ins_oferta = co.capofcodigo
             JOIN capacitacion c ON co.capofcapcodigo = c.capcodigo
             LEFT JOIN pago_reportado pr ON i.inscodigo = pr.pago_inscodigo
             LEFT JOIN contacto_empresa ce ON i.ins_empresa_id = ce.id_contacto
-            ORDER BY i.ins_fecha DESC
-        `;
-        connection.query(query, (err, resultados) => {
-            if (err) reject(err);
-            else resolve(resultados);
+            ${where}`;
+
+        connection.query(countSql, params, (err, countResult) => {
+            if (err) return reject(err);
+            const total = countResult[0].total;
+            const totalPaginas = Math.max(1, Math.ceil(total / porPagina));
+
+            // 2) página actual
+            const dataSql = `
+                SELECT 
+                    i.inscodigo, i.ins_estado, DATE_FORMAT(i.ins_fecha, '%d/%m/%Y') as fecha_formateada,
+                    p.perdoc, p.pernombre, p.perapellido, p.pertelefono, p.peremail, p.perpais, p.perciudad,
+                    c.capnombre,
+                    pr.titular_nombre, pr.titular_apellido, pr.banco_origen, pr.referencia, pr.titular_telefono as tlf_pago,
+                    DATE_FORMAT(pr.fecha_reporte, '%d/%m/%Y %h:%i %p') as fecha_pago,
+                    ce.empresa_nombre
+                FROM inscripcion i
+                JOIN persona p ON i.ins_perdoc = p.perdoc
+                JOIN capacitacion_oferta co ON i.ins_oferta = co.capofcodigo
+                JOIN capacitacion c ON co.capofcapcodigo = c.capcodigo
+                LEFT JOIN pago_reportado pr ON i.inscodigo = pr.pago_inscodigo
+                LEFT JOIN contacto_empresa ce ON i.ins_empresa_id = ce.id_contacto
+                ${where}
+                ORDER BY i.ins_fecha DESC
+                LIMIT ? OFFSET ?`;
+
+            connection.query(dataSql, [...params, porPagina, offset], (err, inscripciones) => {
+                if (err) return reject(err);
+                resolve({ inscripciones, total, pagina, porPagina, totalPaginas });
+            });
+        });
+    });
+};
+
+// 5-b. Opciones únicas para los filtros del panel de participantes.
+AdminModel.obtenerOpcionesFiltros = () => {
+    return new Promise((resolve, reject) => {
+        const sql = `
+            SELECT DISTINCT c.capnombre
+            FROM inscripcion i
+            JOIN capacitacion_oferta co ON i.ins_oferta = co.capofcodigo
+            JOIN capacitacion c ON co.capofcapcodigo = c.capcodigo
+            ORDER BY c.capnombre`;
+        const sqlEmp = `SELECT DISTINCT empresa_nombre FROM contacto_empresa WHERE empresa_nombre IS NOT NULL ORDER BY empresa_nombre`;
+        connection.query(sql, (err, caps) => {
+            if (err) return reject(err);
+            connection.query(sqlEmp, (err, emps) => {
+                if (err) return reject(err);
+                resolve({ capacitaciones: caps.map(r => r.capnombre), empresas: emps.map(r => r.empresa_nombre) });
+            });
         });
     });
 };

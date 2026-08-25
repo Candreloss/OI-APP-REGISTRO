@@ -28,7 +28,7 @@
                 <a href="/panel/participantes" class="nav-item"><iconify-icon icon="lucide:users"></iconify-icon> <span>Participantes y Pagos</span></a>
                 <a href="/panel/empresas" class="nav-item"><iconify-icon icon="lucide:building-2"></iconify-icon> <span>Empresas B2B</span></a>
             </nav>
-            <div class="sidebar-footer"><a href="/logout" class="nav-item logout-btn"><iconify-icon icon="lucide:log-out"></iconify-icon> <span>Cerrar Sesión</span></a></div>
+            <div class="sidebar-footer"><a href="/logout" class="nav-item logout-btn" onclick="cerrarSesion(event)"><iconify-icon icon="lucide:log-out"></iconify-icon> <span>Cerrar Sesión</span></a></div>
         </aside>
 
         <main class="main-content">
@@ -77,6 +77,16 @@
     </div>
 
     <script src="/js/csrf.js"></script>
+    <script>
+      async function cerrarSesion(evento) {
+        evento.preventDefault();
+        try {
+          await apiFetch("/logout", { method: "POST" });
+        } finally {
+          window.location.href = "/admin";
+        }
+      }
+    </script>
     <script>
         async function guardarEdicionOferta(event, id) {
             event.preventDefault();
