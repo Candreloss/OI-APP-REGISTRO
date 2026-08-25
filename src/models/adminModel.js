@@ -1,5 +1,9 @@
 // src/models/AdminModel.js
 const connection = require('../config/database');
+const { q, enTransaccion } = require('../utils/dbUtils');
+
+// Error de negocio: los controladores lo mapean a HTTP 400.
+const errorValidacion = (message) => ({ tipo: 'validacion', message });
 
 const AdminModel = {};
 
@@ -149,9 +153,11 @@ AdminModel.obtenerLotesPendientes = () => {
 };
 
 // 10. Aprobar un lote completo (Bulk Update)
+// FIX: antes sin filtro de estado, un clic volvía a tocar inscripciones ya
+// rechazadas/pendientes/conciliadas de la misma empresa+oferta.
 AdminModel.aprobarLote = (empresaId, ofertaId) => {
     return new Promise((resolve, reject) => {
-        const query = `UPDATE inscripcion SET ins_estado = 'conciliado' WHERE ins_empresa_id = ? AND ins_oferta = ?`;
+        const query = `UPDATE inscripcion SET ins_estado = 'conciliado' WHERE ins_empresa_id = ? AND ins_oferta = ? AND ins_estado = 'en_revision'`;
         connection.query(query, [empresaId, ofertaId], (err) => {
             if (err) reject(err);
             else resolve(true);
@@ -160,6 +166,8 @@ AdminModel.aprobarLote = (empresaId, ofertaId) => {
 };
 
 // 11. Obtener los correos de un lote específico para notificar
+// FIX: solo notifica a quienes se acaban de conciliar (estado en_revision),
+// no a todo el histórico del lote.
 AdminModel.obtenerCorreosLote = (empresaId, ofertaId) => {
      return new Promise((resolve, reject) => {
          const query = `
@@ -168,7 +176,7 @@ AdminModel.obtenerCorreosLote = (empresaId, ofertaId) => {
             JOIN persona p ON i.ins_perdoc = p.perdoc
             JOIN capacitacion_oferta co ON i.ins_oferta = co.capofcodigo
             JOIN capacitacion c ON co.capofcapcodigo = c.capcodigo
-            WHERE i.ins_empresa_id = ? AND i.ins_oferta = ?
+            WHERE i.ins_empresa_id = ? AND i.ins_oferta = ? AND i.ins_estado = 'en_revision'
          `;
          connection.query(query, [empresaId, ofertaId], (err, resultados) => {
              if (err) reject(err);
@@ -229,11 +237,38 @@ AdminModel.actualizarOferta = (id, capofcapcodigo, fecha_inicio, fecha_fin, cupo
 };
 
 // 17. Cambiar estado de inscripción (Aprobar/Rechazar pago)
-AdminModel.actualizarEstadoInscripcion = (inscodigo, estado) => {
+// desdeEstados (opcional): solo aplica el cambio si la inscripción está en
+// alguno de esos estados. Evita dobles clics que pisen estados válidos.
+AdminModel.actualizarEstadoInscripcion = (inscodigo, estado, desdeEstados = null) => {
     return new Promise((resolve, reject) => {
-        connection.query("UPDATE inscripcion SET ins_estado = ? WHERE inscodigo = ?", [estado, inscodigo], (err) => {
-            if (err) reject(err); else resolve(true);
+        const query = desdeEstados
+            ? "UPDATE inscripcion SET ins_estado = ? WHERE inscodigo = ? AND ins_estado IN (?)"
+            : "UPDATE inscripcion SET ins_estado = ? WHERE inscodigo = ?";
+        const params = desdeEstados ? [estado, inscodigo, desdeEstados] : [estado, inscodigo];
+        connection.query(query, params, (err, resultado) => {
+            if (err) return reject(err);
+            if (desdeEstados && resultado.affectedRows === 0) {
+                return reject(errorValidacion('La inscripción ya no está en revisión (quizás fue procesada por otra sesión).'));
+            }
+            resolve(true);
         });
+    });
+};
+
+// 18. Rechazo individual del pago: eliminar reporte + devolver a 'pendiente'
+// en UNA sola transacción (antes eran dos queries sueltas: si fallaba la
+// segunda, quedaba un pago borrado con estado 'en_revision').
+AdminModel.rechazarPagoIndividual = (inscodigo) => {
+    return enTransaccion(async (conn) => {
+        await q(conn, 'DELETE FROM pago_reportado WHERE pago_inscodigo = ?', [inscodigo]);
+        const resultado = await q(conn, `
+            UPDATE inscripcion SET ins_estado = 'pendiente' 
+            WHERE inscodigo = ? AND ins_estado = 'en_revision'
+        `, [inscodigo]);
+        if (resultado.affectedRows === 0) {
+            throw errorValidacion('La inscripción ya no está en revisión.');
+        }
+        return true;
     });
 };
 
@@ -266,30 +301,22 @@ AdminModel.toggleBloqueoCupos = (id, nuevoBloqueo) => {
 };
 
 // 21. Eliminar una inscripción y sus rastros (Pagos y Registro académico)
+// Transacción: las tres eliminaciones son atómicas (antes, un fallo a mitad
+// de camino dejaba registros huérfanos).
 AdminModel.eliminarInscripcionCompleta = (inscodigo) => {
-    return new Promise((resolve, reject) => {
-        // A. Primero buscamos a qué persona y a qué oferta pertenece esta inscripción
-        connection.query('SELECT ins_perdoc, ins_oferta FROM inscripcion WHERE inscodigo = ?', [inscodigo], (err, rows) => {
-            if (err || rows.length === 0) return reject(err || new Error('Inscripción no encontrada'));
-            
-            const { ins_perdoc, ins_oferta } = rows[0];
+    return enTransaccion(async (conn) => {
+        // A. Buscamos a qué persona y oferta pertenece esta inscripción
+        const rows = await q(conn, 'SELECT ins_perdoc, ins_oferta FROM inscripcion WHERE inscodigo = ?', [inscodigo]);
+        if (rows.length === 0) throw new Error('Inscripción no encontrada');
+        const { ins_perdoc, ins_oferta } = rows[0];
 
-            // B. Eliminamos su reporte de pago (si existe)
-            connection.query('DELETE FROM pago_reportado WHERE pago_inscodigo = ?', [inscodigo], (err1) => {
-                if (err1) return reject(err1);
-                
-                // C. Eliminamos su registro académico
-                connection.query('DELETE FROM persona_capacitacion WHERE pcap_perdoc = ? AND pcap_oferta = ?', [ins_perdoc, ins_oferta], (err2) => {
-                    if (err2) return reject(err2);
-
-                    // D. Finalmente, eliminamos la inscripción
-                    connection.query('DELETE FROM inscripcion WHERE inscodigo = ?', [inscodigo], (err3) => {
-                        if (err3) return reject(err3);
-                        resolve(true);
-                    });
-                });
-            });
-        });
+        // B. Reporte de pago
+        await q(conn, 'DELETE FROM pago_reportado WHERE pago_inscodigo = ?', [inscodigo]);
+        // C. Registro académico
+        await q(conn, 'DELETE FROM persona_capacitacion WHERE pcap_perdoc = ? AND pcap_oferta = ?', [ins_perdoc, ins_oferta]);
+        // D. La inscripción misma
+        await q(conn, 'DELETE FROM inscripcion WHERE inscodigo = ?', [inscodigo]);
+        return true;
     });
 };
 

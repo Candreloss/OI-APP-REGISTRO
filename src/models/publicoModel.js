@@ -1,33 +1,36 @@
 // src/models/PublicoModel.js
 const connection = require('../config/database');
+const { q, enTransaccion } = require('../utils/dbUtils');
 
 const PublicoModel = {};
 
-// NUEVO: Validador Maestro de Cupos
-PublicoModel.verificarDisponibilidad = (ofertaId, cantidadRequerida = 1) => {
-    return new Promise((resolve, reject) => {
-        const query = `
-            SELECT co.capofcupos, co.cupos_bloqueados,
-                   (SELECT COUNT(*) FROM inscripcion WHERE ins_oferta = co.capofcodigo) as inscritos
-            FROM capacitacion_oferta co 
-            WHERE co.capofcodigo = ?
-        `;
-        connection.query(query, [ofertaId], (err, resultados) => {
-            if (err) return reject({ tipo: 'validacion', message: 'Error verificando cupos en la base de datos.' });
-            if (resultados.length === 0) return reject({ tipo: 'validacion', message: 'La capacitación no existe.' });
-            
-            const oferta = resultados[0];
-            if (oferta.cupos_bloqueados === 1) return reject({ tipo: 'validacion', message: 'Las inscripciones para esta capacitación están pausadas temporalmente.' });
-            
-            const restantes = oferta.capofcupos - oferta.inscritos;
-            if (restantes < cantidadRequerida) {
-                // Math.max(0, restantes) asegura que si el número es negativo, muestre 0.
-                return reject({ tipo: 'validacion', message: `Cupos insuficientes. Solo quedan ${Math.max(0, restantes)} cupos disponibles.` });
-            }
-            
-            resolve(restantes);
-        });
-    });
+// Error de negocio: los controladores lo mapean a HTTP 400.
+const errorValidacion = (message) => ({ tipo: 'validacion', message });
+
+/**
+ * Disponibilidad de cupos DENTRO de una transacción.
+ * FOR UPDATE bloquea la fila de la oferta hasta el COMMIT/ROLLBACK: dos
+ * inscripciones concurrentes ya no pueden aprobarse sobre los mismos cupos
+ * (elimina la condición de carrera verificar-then-insertar).
+ */
+const disponibilidadBloqueada = async (conn, ofertaId, cantidadRequerida) => {
+    const rows = await q(conn, `
+        SELECT co.capofcupos, co.cupos_bloqueados,
+               (SELECT COUNT(*) FROM inscripcion WHERE ins_oferta = co.capofcodigo) as inscritos
+        FROM capacitacion_oferta co 
+        WHERE co.capofcodigo = ?
+        FOR UPDATE
+    `, [ofertaId]);
+
+    if (rows.length === 0) throw errorValidacion('La capacitación no existe.');
+    const oferta = rows[0];
+    if (oferta.cupos_bloqueados === 1) throw errorValidacion('Las inscripciones para esta capacitación están pausadas temporalmente.');
+
+    const restantes = oferta.capofcupos - oferta.inscritos;
+    if (restantes < cantidadRequerida) {
+        throw errorValidacion(`Cupos insuficientes. Solo quedan ${Math.max(0, restantes)} cupos disponibles.`);
+    }
+    return restantes;
 };
 
 // 1. Mostrar ofertas en la página principal
@@ -48,33 +51,32 @@ PublicoModel.obtenerOfertasActivas = () => {
 };
 
 // 2. Registro Completo de Usuario e Inscripción
+// Transacción atómica: bloqueo de cupos + persona + inscripción (+ académico tolerante).
 PublicoModel.registrarUsuarioEInscripcion = (datosPersona, capacitacion) => {
-    return new Promise((resolve, reject) => {
-        PublicoModel.verificarDisponibilidad(capacitacion,1).then(() => {
+    return enTransaccion(async (conn) => {
+        await disponibilidadBloqueada(conn, capacitacion, 1);
 
-            const queryPersona = `
+        await q(conn, `
             INSERT IGNORE INTO persona 
             (pertipodoc, perdoc, pernombre, perapellido, perfechanac, pertelefono, peremail, perpais, perciudad) 
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        `;
-        connection.query(queryPersona, datosPersona, (errPersona) => {
-            if (errPersona) return reject({ tipo: 'persona', error: errPersona });
+        `, datosPersona);
 
-            const cedula = datosPersona[1];
-            const queryInscripcion = `INSERT INTO inscripcion (ins_perdoc, ins_oferta) VALUES (?, ?)`;
-            
-            connection.query(queryInscripcion, [cedula, capacitacion], (errInscripcion) => {
-                if (errInscripcion) return reject({ tipo: 'inscripcion', error: errInscripcion });
+        const cedula = datosPersona[1];
+        try {
+            await q(conn, 'INSERT INTO inscripcion (ins_perdoc, ins_oferta) VALUES (?, ?)', [cedula, capacitacion]);
+        } catch (err) {
+            if (err.code === 'ER_DUP_ENTRY') throw errorValidacion('¡Ya te encuentras registrado en esta capacitación!');
+            throw err;
+        }
 
-                const queryAcademico = `INSERT INTO persona_capacitacion (pcap_perdoc, pcap_oferta) VALUES (?, ?)`;
-                connection.query(queryAcademico, [cedula, capacitacion], (errAcademico) => {
-                    if (errAcademico) console.error('Error en Fase Académica:', errAcademico);
-                    resolve(true);
-                });
-            });
-        });
-
-        }).catch(reject);
+        try {
+            await q(conn, 'INSERT INTO persona_capacitacion (pcap_perdoc, pcap_oferta) VALUES (?, ?)', [cedula, capacitacion]);
+        } catch (errAcademico) {
+            // El registro académico es secundario: no revierte la inscripción.
+            console.error('Error en Fase Académica:', errAcademico);
+        }
+        return true;
     });
 };
 
@@ -144,26 +146,30 @@ PublicoModel.obtenerCursosPendientes = (cedula) => {
 };
 
 // 9. Reportar el Pago y Cambiar Estado a En Revisión
+// Transacción: el UPDATE es condicional al estado previo, así dos reportes
+// simultáneos no pueden colar el segundo (affectedRows === 0).
 PublicoModel.registrarPagoYActualizar = (datosPago, curso_pagado) => {
-    return new Promise((resolve, reject) => {
-        const queryInsert = `
+    return enTransaccion(async (conn) => {
+        await q(conn, `
             INSERT INTO pago_reportado 
             (pago_inscodigo, titular_nombre, titular_apellido, titular_telefono, banco_origen, referencia) 
             VALUES (?, ?, ?, ?, ?, ?)
-        `;
-        connection.query(queryInsert, datosPago, (errInsert) => {
-            if (errInsert) return reject(errInsert);
+        `, datosPago);
 
-            const queryUpdate = `UPDATE inscripcion SET ins_estado = 'en_revision' WHERE inscodigo = ?`;
-            connection.query(queryUpdate, [curso_pagado], (errUpdate) => {
-                if (errUpdate) reject(errUpdate);
-                else resolve(true);
-            });
-        });
+        const resultado = await q(conn, `
+            UPDATE inscripcion SET ins_estado = 'en_revision' 
+            WHERE inscodigo = ? AND ins_estado IN ('pendiente', 'rechazado')
+        `, [curso_pagado]);
+
+        if (resultado.affectedRows === 0) {
+            throw errorValidacion('Esta inscripción ya tiene un pago en revisión o conciliado.');
+        }
+        return true;
     });
 };
 
 // 10. Multi-inscripción: Obtener capacitaciones que el usuario AÚN NO TIENE
+// FIX: antes ignoraba la cédula y ofrecía capacitaciones ya cursadas.
 PublicoModel.obtenerOfertasDisponibles = (cedula) => {
     return new Promise((resolve, reject) => {
         const query = `
@@ -172,6 +178,10 @@ PublicoModel.obtenerOfertasDisponibles = (cedula) => {
             FROM capacitacion_oferta co 
             JOIN capacitacion c ON co.capofcapcodigo = c.capcodigo 
             WHERE co.capofestatus = 1
+              AND NOT EXISTS (
+                  SELECT 1 FROM inscripcion i2 
+                  WHERE i2.ins_oferta = co.capofcodigo AND i2.ins_perdoc = ?
+              )
         `;
         connection.query(query, [cedula], (err, resultados) => {
             if (err) reject(err);
@@ -182,19 +192,22 @@ PublicoModel.obtenerOfertasDisponibles = (cedula) => {
 
 // 11. Multi-inscripción: Inscripción rápida de usuario existente
 PublicoModel.inscripcionRapida = (cedula, capacitacion) => {
-    return new Promise((resolve, reject) => {
-        PublicoModel.verificarDisponibilidad(capacitacion,1).then(() => {
-            const queryInscripcion = `INSERT INTO inscripcion (ins_perdoc, ins_oferta) VALUES (?, ?)`;
-        connection.query(queryInscripcion, [cedula, capacitacion], (err) => {
-            if (err) return reject(err);
+    return enTransaccion(async (conn) => {
+        await disponibilidadBloqueada(conn, capacitacion, 1);
 
-            const queryAcademico = `INSERT INTO persona_capacitacion (pcap_perdoc, pcap_oferta) VALUES (?, ?)`;
-            connection.query(queryAcademico, [cedula, capacitacion], (errAcademico) => {
-                if (errAcademico) console.error('Error en Fase Académica rápida:', errAcademico);
-                resolve(true);
-            });
-        });
-        }).catch(reject);
+        try {
+            await q(conn, 'INSERT INTO inscripcion (ins_perdoc, ins_oferta) VALUES (?, ?)', [cedula, capacitacion]);
+        } catch (err) {
+            if (err.code === 'ER_DUP_ENTRY') throw errorValidacion('Ya estás inscrito en esta capacitación.');
+            throw err;
+        }
+
+        try {
+            await q(conn, 'INSERT INTO persona_capacitacion (pcap_perdoc, pcap_oferta) VALUES (?, ?)', [cedula, capacitacion]);
+        } catch (errAcademico) {
+            console.error('Error en Fase Académica rápida:', errAcademico);
+        }
+        return true;
     });
 };
 
@@ -242,80 +255,42 @@ PublicoModel.obtenerInscripcionDeUsuario = (inscodigo, cedula) => {
     });
 };
 
-// 13. Procesar lote masivo de inscripciones B2B con Transacciones y Pool
+// 13. Procesar lote masivo de inscripciones B2B
+// FIX: el conteo de ya-inscritos y la validación de cupos ahora ocurren
+// DENTRO de la transacción y con bloqueo FOR UPDATE (antes eran externos:
+// dos empresas concurrentes podían agotar los mismos cupos).
 PublicoModel.registrarLoteTransaccion = (empresaId, ofertaId, empleados) => {
-    return new Promise((resolve, reject) => {
+    return enTransaccion(async (conn) => {
         const docs = empleados.map(e => e.doc);
-        if (docs.length === 0) return resolve(true);
+        if (docs.length === 0) return true;
 
-        // PASO 1: Verificamos cuántos de estos documentos YA están inscritos en este curso
-        const queryExistentes = `SELECT COUNT(*) as ya_inscritos FROM inscripcion WHERE ins_oferta = ? AND ins_perdoc IN (?)`;
-        
-        connection.query(queryExistentes, [ofertaId, docs], (errCount, resultsCount) => {
-            if (errCount) return reject(errCount);
-            
-            const yaInscritos = resultsCount[0].ya_inscritos;
-            
-            // PASO 2: La matemática real. Solo necesitamos cupos para la gente "nueva".
-            const nuevosRequeridos = empleados.length - yaInscritos;
+        // Conteo de ya-inscritos con el mismo candado que usará la matemática de cupos.
+        const filasCount = await q(conn,
+            'SELECT COUNT(*) as ya_inscritos FROM inscripcion WHERE ins_oferta = ? AND ins_perdoc IN (?)',
+            [ofertaId, docs]
+        );
+        const nuevosRequeridos = empleados.length - filasCount[0].ya_inscritos;
+        if (nuevosRequeridos > 0) await disponibilidadBloqueada(conn, ofertaId, nuevosRequeridos);
 
-            // PASO 3: Solo verificamos disponibilidad si realmente hay gente nueva entrando
-            const checkDisponibilidad = nuevosRequeridos > 0 
-                ? PublicoModel.verificarDisponibilidad(ofertaId, nuevosRequeridos)
-                : Promise.resolve();
+        for (const emp of empleados) {
+            const queryPersona = `
+                INSERT INTO persona (pertipodoc, perdoc, pernombre, perapellido, perfechanac, pertelefono, peremail, perpais, perciudad) 
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE 
+                pernombre=VALUES(pernombre), perapellido=VALUES(perapellido), pertelefono=VALUES(pertelefono), 
+                peremail=VALUES(peremail), perpais=VALUES(perpais), perciudad=VALUES(perciudad), perfechanac=VALUES(perfechanac)
+            `;
+            const datosPersona = [emp.tipodoc, emp.doc, emp.nombre, emp.apellido, emp.fechanac, emp.telefono, emp.email, emp.pais, emp.ciudad];
+            await q(conn, queryPersona, datosPersona);
 
-            checkDisponibilidad.then(() => {
-                // PASO 4: Pedimos una conexión prestada al Pool e iniciamos transacción
-                connection.getConnection((errPool, conn) => {
-                    if (errPool) return reject(errPool);
+            const rowsCheck = await q(conn, 'SELECT inscodigo FROM inscripcion WHERE ins_perdoc = ? AND ins_oferta = ?', [emp.doc, ofertaId]);
+            if (rowsCheck.length > 0) continue; // ya inscrito por un envío anterior: no duplicar
 
-                    conn.beginTransaction(errTrans => {
-                        if (errTrans) { conn.release(); return reject(errTrans); }
-
-                        const procesarEmpleado = (index) => {
-                            if (index >= empleados.length) {
-                                return conn.commit(errCommit => {
-                                    if (errCommit) return conn.rollback(() => { conn.release(); reject(errCommit); });
-                                    conn.release(); resolve(true);
-                                });
-                            }
-
-                            const emp = empleados[index];
-                            const queryPersona = `
-                                INSERT INTO persona (pertipodoc, perdoc, pernombre, perapellido, perfechanac, pertelefono, peremail, perpais, perciudad) 
-                                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-                                ON DUPLICATE KEY UPDATE 
-                                pernombre=VALUES(pernombre), perapellido=VALUES(perapellido), pertelefono=VALUES(pertelefono), 
-                                peremail=VALUES(peremail), perpais=VALUES(perpais), perciudad=VALUES(perciudad), perfechanac=VALUES(perfechanac)
-                            `;
-                            const datosPersona = [emp.tipodoc, emp.doc, emp.nombre, emp.apellido, emp.fechanac, emp.telefono, emp.email, emp.pais, emp.ciudad];
-
-                            conn.query(queryPersona, datosPersona, (errPersona) => {
-                                if (errPersona) return conn.rollback(() => { conn.release(); reject(errPersona); });
-
-                                const checkQuery = `SELECT inscodigo FROM inscripcion WHERE ins_perdoc = ? AND ins_oferta = ?`;
-                                conn.query(checkQuery, [emp.doc, ofertaId], (errCheck, rowsCheck) => {
-                                    if (errCheck) return conn.rollback(() => { conn.release(); reject(errCheck); });
-                                    if (rowsCheck.length > 0) return procesarEmpleado(index + 1);
-
-                                    const queryInscripcion = `INSERT INTO inscripcion (ins_perdoc, ins_oferta, ins_empresa_id) VALUES (?, ?, ?)`;
-                                    conn.query(queryInscripcion, [emp.doc, ofertaId, empresaId], (errInsc) => {
-                                        if (errInsc) return conn.rollback(() => { conn.release(); reject(errInsc); });
-
-                                        const queryAcademico = `INSERT INTO persona_capacitacion (pcap_perdoc, pcap_oferta) VALUES (?, ?)`;
-                                        conn.query(queryAcademico, [emp.doc, ofertaId], (errAcad) => {
-                                            if (errAcad) return conn.rollback(() => { conn.release(); reject(errAcad); });
-                                            procesarEmpleado(index + 1); 
-                                        });
-                                    });
-                                });
-                            });
-                        };
-                        procesarEmpleado(0);
-                    });
-                });
-            }).catch(reject);
-        });
+            await q(conn, 'INSERT INTO inscripcion (ins_perdoc, ins_oferta, ins_empresa_id) VALUES (?, ?, ?)', [emp.doc, ofertaId, empresaId]);
+            // En lote B2B el registro académico SÍ es parte de la atomicidad.
+            await q(conn, 'INSERT INTO persona_capacitacion (pcap_perdoc, pcap_oferta) VALUES (?, ?)', [emp.doc, ofertaId]);
+        }
+        return true;
     });
 };
 

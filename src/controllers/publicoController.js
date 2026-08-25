@@ -209,7 +209,8 @@ controller.reportarPago = async (req, res) => {
         const datosPago = [d.curso_pagado, d.titular_nombre, d.titular_apellido, d.titular_telefono, d.banco_origen, d.referencia];
         await PublicoModel.registrarPagoYActualizar(datosPago, d.curso_pagado);
 
-        await transporter.sendMail({
+        // Correo best-effort: la BD ya confirmó el reporte.
+        transporter.sendMail({
             to: process.env.ADMIN_EMAIL,
             subject: `💰 Nuevo Pago Reportado: ${d.titular_nombre} ${d.titular_apellido} - Ref: ${d.referencia}`,
             html: `
@@ -224,10 +225,13 @@ controller.reportarPago = async (req, res) => {
                 <p>El comprobante ha sido adjuntado.</p>
             `,
             attachments: [{ filename: `comprobante_${d.referencia}.jpg`, content: comprobante.buffer }]
-        });
+        }).catch(err => console.error('Error enviando correo de pago:', err.message));
 
         res.json({ success: true, message: '¡Pago y capture reportados con éxito! El administrador lo revisará pronto.' });
     } catch (error) {
+        if (error.tipo === 'validacion') {
+            return res.status(400).json({ success: false, message: error.message });
+        }
         console.error('Error registrando pago:', error);
         res.status(500).json({ success: false, message: 'Hubo un problema procesando tu reporte. Si persiste, contáctanos.' });
     }
@@ -444,7 +448,8 @@ controller.reportarPagoB2B = async (req, res) => {
         const datosPagoBase = [d.titular_nombre, d.titular_apellido, d.titular_telefono, d.banco_origen, d.referencia];
         await PublicoModel.registrarPagoB2B(pendientes, datosPagoBase, empresaId);
 
-        await transporter.sendMail({
+        // Correo best-effort: la BD ya confirmó el reporte.
+        transporter.sendMail({
             to: process.env.ADMIN_EMAIL,
             subject: `🏢 Pago o Abono Corporativo Reportado: Lote #${d.curso_pagado} (${pendientes.length} empleados)`,
             html: `
@@ -457,7 +462,7 @@ controller.reportarPagoB2B = async (req, res) => {
                 </ul>
             `,
             attachments: [{ filename: `comprobante_b2b_${d.referencia}.jpg`, content: comprobante.buffer }]
-        });
+        }).catch(err => console.error('Error enviando correo B2B:', err.message));
 
         res.json({ success: true, message: `¡Pago reportado para los ${pendientes.length} empleados con éxito!` });
     } catch (error) {

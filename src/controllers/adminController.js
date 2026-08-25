@@ -180,41 +180,50 @@ adminController.procesarEditarOferta = async (req, res) => {
 adminController.aprobarPago = async (req, res) => {
     const inscodigo = req.params.id;
     try {
-        await AdminModel.actualizarEstadoInscripcion(inscodigo, 'conciliado');
+        // Condicional: solo desde 'en_revision' (un doble clic no reprocesa).
+        await AdminModel.actualizarEstadoInscripcion(inscodigo, 'conciliado', ['en_revision']);
         const datos = await AdminModel.obtenerDatosInscripcionCorreo(inscodigo);
         if (datos) {
-            await transporter.sendMail({
+            // Correo best-effort: la BD ya quedó confirmada, un fallo de envío
+            // no debe presentarse como fallo de la operación.
+            transporter.sendMail({
                 to: datos.peremail,
                 subject: '✅ ¡Pago Verificado! - Organización Inteligente',
                 html: `<h3>¡Hola, ${datos.pernombre}!</h3>
                         <p>Nos complace informarte que hemos verificado tu pago exitosamente.</p>
                         <p>Tu inscripción en <b>${datos.capnombre}</b> está 100% confirmada.</p>
                         <p>Pronto recibirás más detalles sobre el inicio de clases.</p>`
-            });
+            }).catch(err => console.error('Error enviando correo de aprobación:', err.message));
         }
-        res.json({ success: true, message: 'Pago conciliado y correo enviado.' });
-    } catch (err) { res.status(500).json({ success: false, message: 'Error al actualizar base de datos' }); }
+        res.json({ success: true, message: 'Pago conciliado.' });
+    } catch (err) {
+        if (err.tipo === 'validacion') return res.status(400).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: 'Error al actualizar base de datos' });
+    }
 };
 
 adminController.rechazarPago = async (req, res) => {
     const inscodigo = req.params.id;
     try {
-        await AdminModel.eliminarReportePago(inscodigo);
-        await AdminModel.actualizarEstadoInscripcion(inscodigo, 'pendiente');
-        
+        // Atómico: borra el reporte y devuelve a 'pendiente' en una transacción.
+        await AdminModel.rechazarPagoIndividual(inscodigo);
+
         const datos = await AdminModel.obtenerDatosInscripcionCorreo(inscodigo);
         if (datos) {
-            await transporter.sendMail({
+            transporter.sendMail({
                 to: datos.peremail,
                 subject: '❌ Problema con tu pago - Organización Inteligente',
                 html: `<h3>¡Hola, ${datos.pernombre}!</h3>
                         <p>Hemos revisado tu reporte de pago para <b>${datos.capnombre}</b> pero no pudimos verificar la transferencia en nuestras cuentas.</p>
                         <p>Tu inscripción sigue reservada, pero ha vuelto a estado <b>Pendiente</b>.</p>
                         <p>Por favor, ingresa nuevamente al sistema y reporta los datos correctos del pago.</p>`
-            });
+            }).catch(err => console.error('Error enviando correo de rechazo:', err.message));
         }
-        res.json({ success: true, message: 'Reporte eliminado y correo enviado.' });
-    } catch (err) { res.status(500).json({ success: false, message: 'Error procesando el rechazo' }); }
+        res.json({ success: true, message: 'Reporte eliminado.' });
+    } catch (err) {
+        if (err.tipo === 'validacion') return res.status(400).json({ success: false, message: err.message });
+        res.status(500).json({ success: false, message: 'Error procesando el rechazo' });
+    }
 };
 
 adminController.editarParticipante = async (req, res) => {
@@ -267,34 +276,37 @@ adminController.aprobarLoteB2B = async (req, res) => {
     if (!empresa_id || !oferta_id) return res.status(400).json({ success: false, message: 'Faltan datos del lote' });
 
     try {
-        // 1. Obtenemos a quiénes vamos a notificar (antes de que se aprueben, por seguridad)
+        // 1. Obtenemos a quiénes vamos a notificar (solo los en_revision que
+        // el UPDATE de abajo va a conciliar).
         const empleados = await AdminModel.obtenerCorreosLote(empresa_id, oferta_id);
 
         // 2. Aprobamos a todos en la base de datos de un solo golpe
         await AdminModel.aprobarLote(empresa_id, oferta_id);
 
-        // 3. Enviamos un correo a cada empleado. Usamos Promise.allSettled 
-        // para que se envíen todos al mismo tiempo sin colgar el servidor.
+        // 3. Correos best-effort: se disparan sin bloquear la respuesta y un
+        // fallo de envío jamás revierte la conciliación ya confirmada.
         if (empleados && empleados.length > 0) {
-            const promesasCorreos = empleados.map(emp => {
-                return transporter.sendMail({
+            Promise.allSettled(empleados.map(emp =>
+                transporter.sendMail({
                     to: emp.peremail,
                     subject: '✅ ¡Inscripción Corporativa Confirmada! - OI',
                     html: `<h3>¡Hola, ${emp.pernombre}!</h3>
                            <p>Tu empresa ha gestionado y conciliado un pago o abono en tu nombre exitosamente.</p>
                            <p>Tu cupo en <b>${emp.capnombre}</b> está 100% confirmado.</p>
                            <p>¡Bienvenido/a a esta nueva capacitación!</p>`
-                });
+                })
+            )).then(resultados => {
+                const fallos = resultados.filter(r => r.status === 'rejected').length;
+                if (fallos > 0) console.error(`Correos de lote fallidos: ${fallos}/${resultados.length}`);
             });
-            await Promise.allSettled(promesasCorreos);
         }
 
-        // --- NUEVO: NOTIFICACIÓN DE APROBACIÓN A LA EMPRESA B2B ---
+        // --- NOTIFICACIÓN DE APROBACIÓN A LA EMPRESA B2B ---
         // Buscamos el correo y nombre de la empresa usando la función que creamos antes
         const infoEmpresa = await AdminModel.obtenerInfoEmpresa(empresa_id);
         
         if (infoEmpresa && infoEmpresa.emp_email) {
-            await transporter.sendMail({
+            transporter.sendMail({
                 to: infoEmpresa.emp_email,
                 subject: '✅ ¡Pago o Abono Corporativo Aprobado con Éxito!',
                 html: `
@@ -308,7 +320,7 @@ adminController.aprobarLoteB2B = async (req, res) => {
                         <p style="font-size: 12px; color: #64748b;">Atentamente,<br>El equipo de Organización Inteligente.</p>
                     </div>
                 `
-            });
+            }).catch(err => console.error('Error enviando correo a empresa:', err.message));
         }
         // ----------------------------------------------------------
         
@@ -337,9 +349,9 @@ adminController.rechazarPagoLote = async (req, res) => {
         // 2. Buscamos el correo de la empresa
         const infoEmpresa = await AdminModel.obtenerInfoEmpresa(empresa_id);
         
-        // 3. Enviamos el correo de alerta
+        // 3. Correo best-effort (no bloquea la respuesta)
         if (infoEmpresa && infoEmpresa.emp_email) {
-            await transporter.sendMail({
+            transporter.sendMail({
                 to: infoEmpresa.emp_email,
                 subject: '⚠️ Importante: Problema con tu pago corporativo',
                 html: `
@@ -354,7 +366,7 @@ adminController.rechazarPagoLote = async (req, res) => {
                         <p style="font-size: 12px; color: #64748b;">Atentamente,<br>El equipo de Organización Inteligente.</p>
                     </div>
                 `
-            });
+            }).catch(err => console.error('Error enviando correo de rechazo a empresa:', err.message));
         }
 
         console.log(`[AUDITORÍA] [${new Date().toLocaleString('es-VE')}] - PAGO B2B RECHAZADO | Admin: ${req.session.admin.username} | Empresa ID: ${empresa_id}`);
